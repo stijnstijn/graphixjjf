@@ -98,7 +98,7 @@ class J2TFile extends JJ2File {
      * @return array  Settings
      */
     public function get_settings(): array {
-        if (!isset($this->settings)) {
+        if (!$this->settings) {
             $settings = $this->get_substream(1);
             $bytes = new BufferReader($settings);
             $this->settings = [

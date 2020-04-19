@@ -6,7 +6,8 @@ namespace J2o;
 
 require 'vendor/autoload.php';
 
-ini_set('memory_limit', '4G'); //some of these generators need a lot of RAM
+//some of these generators need a lot of RAM and time
+ini_set('memory_limit', 8589934592);
 ini_set('max_execution_time', 600);
 
 if(!isset($argv[1])) {
@@ -59,16 +60,14 @@ switch($type) {
         $file = new Lib\J2LFile($argv[1]);
 
         //load script files, etc
-        $path = explode(DIRECTORY_SEPARATOR, $argv[1]);
-        array_pop($path);
-        $path = implode(DIRECTORY_SEPARATOR, $path);
-        $files = glob('*.*');
-        foreach($files as $file) {
-            $extension = explode('.', $file);
+        $path = dirname($argv[1]);
+        $files = glob($path.'/*.*');
+        foreach($files as $adjacent_file) {
+            $extension = explode('.', $adjacent_file);
             $extension = array_pop($extension);
 
-            if(in_array($extension, ['.j2t', '.j2l', '.j2as', '.asc'])) {
-                $file->load_adjacent([$file]);
+            if(in_array($extension, ['j2t', 'j2l', 'j2as', 'asc'])) {
+                $file->load_adjacent([$adjacent_file]);
             }
         };
         break;

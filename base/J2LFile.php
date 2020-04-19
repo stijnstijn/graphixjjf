@@ -44,7 +44,7 @@ class J2LFile extends JJ2File {
     /**
      * @var J2TFile  Tileset to use for this level
      */
-    private string $tileset;
+    private J2TFile $tileset;
     /**
      * @var resource Tileset image
      */
@@ -165,6 +165,7 @@ class J2LFile extends JJ2File {
         $this->canonical_filename = $canonical_filename;
         $this->data = file_get_contents($filename);
         $this->parse_header();
+        $this->get_settings();
 
         //this was calibrated using Blackraptor's "A Generic Single Player Level II"
         $this->budget = floor(get_memory_limit() / 23);
@@ -275,7 +276,7 @@ class J2LFile extends JJ2File {
      * @return array  Parsed level info
      */
     public function get_settings(): array {
-        if (!isset($this->settings)) {
+        if (!$this->settings) {
             $max_tiles = $this->version == self::VERSION_TSF ? 4096 : 1024;
             $anim_tiles = 128; //$this->version == self::VERSION_TSF ? 256 : 128;
 

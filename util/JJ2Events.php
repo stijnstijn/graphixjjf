@@ -366,7 +366,7 @@ class JJ2Events {
      * @throws JJ2FileException  If the library file does not exist
      */
     public function get_library(string $filename): J2AFile {
-        $path = dirname(__FILE__).'../resources/'.$filename;
+        $path = dirname(dirname(__FILE__)).'/resources/'.$filename;
         if (!file_exists($path)) {
             throw new JJ2FileException('Animation library '.$filename.' not found.');
         }
@@ -636,7 +636,7 @@ class JJ2Events {
             case 153: //bridge
                 $bridge_tiles = self::get_event_param($event_params, 0, 4);
                 if ($bridge_tiles == 0) {
-                    continue;
+                    break;
                 }
                 $type = min(6, self::get_event_param($event_params, 4, 3));
                 $length = $bridge_tiles * 32;

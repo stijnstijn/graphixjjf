@@ -13,6 +13,9 @@
  */
 function get_memory_limit(): int {
     $string = ini_get('memory_limit');
+    if(is_numeric($string)) {
+        return intval($string);
+    }
 
     return intval(preg_replace_callback('/(\-?\d+)(.?)/', function ($m) {
         return $m[1] * pow(1024, strpos('BKMG', $m[2]));
@@ -98,8 +101,13 @@ function debug_here($arg = 'here buG???'): void {
     var_dump($arg);
     $var = ob_get_clean();
 
-    echo <<<PROVISIONAL_ERROR
+    if(PHP_SAPI == 'cli') {
+        echo var_export($arg, true).PHP_EOL.PHP_EOL;
+        echo implode(PHP_EOL, explode('<br>', $trace));
+    } else {
+        echo <<<PROVISIONAL_ERROR
 <!doctype html><title>Website error</title><div style="width:75%;margin:0 auto;margin-top:2em;font-size:16px;padding:1em;background:#CCC;color:#000;border:1px solid #000;font-family:monospace;"><p style="font-weight:bold;">Trace</p><p><pre>{$var}</pre>at:</p><p>{$trace}</p></div>
 PROVISIONAL_ERROR;
-//    exit;
+    }
+    exit;
 }
