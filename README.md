@@ -25,7 +25,7 @@ Then use it, for example, like this:
 require 'vendor/autoload.php';
 use J2o\Lib\J2AFile;
 
-$j2afile = J2AFile('Anims.j2a');
+$j2afile = new J2AFile('Anims.j2a');
 $settings = $j2afile->get_settings();
 
 echo 'Rendering '.$settings['set_count'].' animation sets to a spritesheet...'.PHP_EOL;
