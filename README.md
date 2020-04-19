@@ -38,6 +38,11 @@ level. This can be useful for various things (calculating the amount of pickups
 in a level, finding the most-used music file for all levels in a folder, et
 cetera).
 
+*Note that to render most J2L files* you will need to put the required `.j2a`
+files in the `resources` folder. Usually you can simply copy all j2a files in
+your game folder, dump them there, and it should work. GRAPHIXJJF assumes that
+the Anims.j2a file it reads from is the The Secret Files version.
+
 ## API
 A command-line script `render-file.php` is provided to generate PNG previews of
 a given file with. However, the focus of this library is on the classes 
