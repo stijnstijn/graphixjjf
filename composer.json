@@ -1,0 +1,34 @@
+{
+  "name": "j2o/graphixjjf",
+  "description": "The GRAphics-oriented PHp Interface eXtravaganza (GRAPHIXJJF) defines a set of PHP classes that can be used to interface and render various Jazz Jackrabbit data files.",
+  "version": "1.0.0",
+  "type": "library",
+  "readme": "README.md",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Stijn Peeters",
+      "email": "stijn@jazz2online.com",
+      "homepage": "http://www.jazz2online.com",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "email": "stijn@jazz2online.com",
+    "source": "https://github.com/stijnstijn/graphixjjf",
+    "forum": "https://www.jazz2online.com/jcf"
+  },
+  "require": {
+    "php": "^7.4",
+    "ext-gd": "*"
+  },
+  "autoload": {
+    "files": [
+      "base/misc.php",
+      "base/exceptions.php"
+    ],
+    "psr-4": {
+      "J2o\\Lib\\": ["base", "util"]
+    }
+  }
+}
