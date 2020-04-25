@@ -48,7 +48,7 @@ class J2LFile extends JJ2File {
     /**
      * @var resource Tileset image
      */
-    private $tileset_image;
+    private $tileset_image = NULL;
     /**
      * @var resource Tileset mask image
      */
@@ -156,7 +156,6 @@ class J2LFile extends JJ2File {
         $this->canonical_filename = $this->filename;
         $this->data = file_get_contents($this->filename);
         $this->parse_header();
-        $this->get_settings();
 
         //this was calibrated using Blackraptor's "A Generic Single Player Level II"
         $this->budget = floor(get_memory_limit() / 23);
@@ -406,7 +405,7 @@ class J2LFile extends JJ2File {
         }
 
         if (strlen($this->data) < $offset + 5) {
-            throw new JJ2FileException('No Data5 section in level file');
+            throw new JJ2FileException('No Data5 section in level file '.$this->filename);
         }
 
         $data5 = new BufferReader($this->data);
@@ -646,11 +645,10 @@ class J2LFile extends JJ2File {
                     }
                 }
             }
-
-            //save updated tileset and see which layer ID ended up being the sprite layer
-            $this->tileset_image = &$revised_tileset_image;
-            $this->tileset_image_mask = &$revised_mask_image;
         }
+
+        $this->tileset_image = &$revised_tileset_image;
+        $this->tileset_image_mask = &$revised_mask_image;
 
         //load weapons settings (this is only valid for version 0x105+)
         $this->mlle_settings['weapons'] = [];
@@ -830,6 +828,10 @@ class J2LFile extends JJ2File {
      * @throws JJ2FileException If tileset file could not be read or parsed
      */
     public function load_tileset(string $path = NULL, array $palette = NULL): void {
+        if($this->tileset_image) {
+            return;
+        }
+
         //try to guess the path
         if ($path === NULL) {
             $settings = $this->get_settings();
@@ -1204,7 +1206,7 @@ class J2LFile extends JJ2File {
 
             if ($layer['texture_mode'] > 0) {
                 $this->render_textured_background($layer_ID, $image, $layer['texture_rgb']);
-            } elseif ($layer['has_tiles'] && (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']))) {//|| ($layer['tile_width'] && $layer['tile_height']))) {
+            } elseif ($layer['has_tiles'] && (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']) || ($layer['tile_width'] && $layer['tile_height']))) {
                 //render only layers with x and y speed = 1 OR tileX and tileY
                 $this->render_layer($layer_ID, $image, false, $box);
 
@@ -1324,8 +1326,8 @@ class J2LFile extends JJ2File {
         //if the layer is tiled in both directions, do so with the middle of the level as point of origin - that
         //minimizes drift in either direction (but not if both speeds are 1)
         $expand_horizontal = $expand_vertical = 0;
-        if ($layer['tile_width'] && $layer['width'] < $layer4['width'] && $layer['speed_x'] != 65536) {
-            $expand_horizontal = max(0, $layer4['width'] - $layer['width']) / 2;
+        if ($layer['tile_width'] && $layer[$width_key] < $layer4['width'] && $layer['speed_x'] != 65536) {
+            $expand_horizontal = max(0, $layer4['width'] - $layer[$width_key]) / 2;
         }
 
         if ($layer['tile_height'] && $layer['height'] < $layer4['height'] && $layer['speed_y'] != 65536) {
@@ -1336,7 +1338,7 @@ class J2LFile extends JJ2File {
             $map = $this->expand_map($map, $layer['width_real'], $layer['height'], floor($expand_vertical), ceil($expand_horizontal), ceil($expand_vertical), floor($expand_horizontal));
             $layer['width_real'] += floor($expand_horizontal) + ceil($expand_horizontal);
             $layer['height'] += floor($expand_vertical) + ceil($expand_vertical);
-            $real_width = ($layer['width'] + floor($expand_horizontal) + ceil($expand_horizontal)) * 32;
+            $real_width = $layer['width_real'] * 32;
         } else {
             //if the level width is not a multiple of 4, using it for positioning will mess stuff up, so adjust
             $real_width = ceil($layer[$width_key] / 4) * 4 * 32;
