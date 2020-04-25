@@ -140,35 +140,36 @@ class J2LFile extends JJ2File {
      * Sets up the object, checking whether given file path is valid and giving several
      * variables initial values. Then it reads the header via another method.
      *
-     * @param string $filename The file path pointing to the Level to use.
-     * @param string $canonical_filename The canonical filename, with which it is referred to by other files, if
-     * different from the given file name.
-     *
      * @throws  JJ2FileException  If there is a problem with the level file.
      *
      * @access  public
      */
-    public function __construct(string $filename, string $canonical_filename = NULL) {
-        if (!is_readable($filename)) {
-            throw new JJ2FileException('Could not read level file '.$filename);
+    public function initialise(): void {
+        if (!is_readable($this->filename)) {
+            throw new JJ2FileException('Could not read level file '.$this->filename);
         }
 
-        if (filesize($filename) == 0) {
-            throw new JJ2FileException('Level file '.$filename.' is zero bytes');
+        if (filesize($this->filename) == 0) {
+            throw new JJ2FileException('Level file '.$this->filename.' is zero bytes');
         }
 
-        if (!$canonical_filename) {
-            $canonical_filename = $filename;
-        }
-
-        $this->filename = $filename;
-        $this->canonical_filename = $canonical_filename;
-        $this->data = file_get_contents($filename);
+        $this->canonical_filename = $this->filename;
+        $this->data = file_get_contents($this->filename);
         $this->parse_header();
         $this->get_settings();
 
         //this was calibrated using Blackraptor's "A Generic Single Player Level II"
         $this->budget = floor(get_memory_limit() / 23);
+    }
+
+    /**
+     * Set canonical filename for level file
+     *
+     * @param string $canonical_filename The canonical filename, with which it is referred to by other files, if
+     * different from the given file name.
+     */
+    public function set_canonical_filename(string $canonical_filename): void {
+        $this->canonical_filename = $canonical_filename;
     }
 
 
@@ -1428,7 +1429,7 @@ class J2LFile extends JJ2File {
         }
 
         $settings = $this->get_settings();
-        $event_mgr = new JJ2Events($this->settings['palette']);
+        $event_mgr = new JJ2Events($this->settings['palette'], $this->resource_folder);
 
         if (!empty($this->mlle_settings) && isset($this->mlle_settings['weapons']) && count($this->mlle_settings['weapons']) >= 9) {
             for ($i = 7; $i <= 9; $i += 1) {

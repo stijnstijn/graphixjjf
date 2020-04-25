@@ -343,6 +343,10 @@ class JJ2Events {
      * @var array  Event redirection - replace all events with this ID with the other ID
      */
     private array $redirect = [];
+    /**
+     * @var string  Resource folder, containing animation libraries
+     */
+    private string $resource_folder = '';
 
 
     /**
@@ -350,9 +354,10 @@ class JJ2Events {
      *
      * @param array $palette
      */
-    public function __construct(array $palette) {
+    public function __construct(array $palette, string $resource_folder) {
         $this->j2a = [];
         $this->palette = $palette;
+        $this->resource_folder = $resource_folder;
     }
 
     /**
@@ -366,7 +371,7 @@ class JJ2Events {
      * @throws JJ2FileException  If the library file does not exist
      */
     public function get_library(string $filename): J2AFile {
-        $path = dirname(dirname(__FILE__)).'/resources/'.$filename;
+        $path = $this->resource_folder.DIRECTORY_SEPARATOR.$filename;
         if (!file_exists($path)) {
             throw new JJ2FileException('Animation library '.$filename.' not found.');
         }

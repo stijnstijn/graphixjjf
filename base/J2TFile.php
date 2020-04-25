@@ -39,17 +39,16 @@ class J2TFile extends JJ2File {
      *
      * @throws JJ2FileException  If tileset could not be found or is zero bytes
      */
-    public function __construct(string $filename) {
-        if (!is_readable($filename)) {
-            throw new JJ2FileException('Could not read tileset file '.$filename);
+    public function initialise(): void {
+        if (!is_readable($this->filename)) {
+            throw new JJ2FileException('Could not read tileset file '.$this->filename);
         }
 
-        if (filesize($filename) == 0) {
-            throw new JJ2FileException('Tileset file '.$filename.' is zero bytes');
+        if (filesize($this->filename) == 0) {
+            throw new JJ2FileException('Tileset file '.$this->filename.' is zero bytes');
         }
 
-        $this->filename = $filename;
-        $this->data = file_get_contents($filename);
+        $this->data = file_get_contents($this->filename);
         $this->parse_header();
     }
 

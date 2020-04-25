@@ -26,33 +26,27 @@ class J2EFile extends JJ2File {
      * Sets up the object, checking whether given file path is valid and giving several
      * variables initial values. Then it reads the header via another method.
      *
-     * @param string $filename The file path pointing to the Level to use.
-     * @param array $palette Palette to use, as [r,g,b] elements
-     *
      * @throws  JJ2FileException  If there is a problem with the level file.
      */
-    public function __construct(string $filename, array $palette = NULL) {
-        if (!is_readable($filename)) {
-            throw new JJ2FileException('Could not read level file '.$filename);
+    public function initialise(): void {
+        if (!is_readable($this->filename)) {
+            throw new JJ2FileException('Could not read level file '.$this->filename);
         }
 
-        if (filesize($filename) == 0) {
-            throw new JJ2FileException('Level file '.$filename.' is zero bytes');
+        if (filesize($this->filename) == 0) {
+            throw new JJ2FileException('Level file '.$this->filename.' is zero bytes');
         }
 
-        if ($palette === NULL) {
-            if (!is_readable('Jazz2.pal')) {
+        if ($this->palette === NULL) {
+            if (!is_readable($this->resource_folder.'/Jazz2.pal')) {
                 throw new JJ2FileException('No episode palette was given, trying to read Jazz2.pal, but file is not readable');
             }
             $this->parse_palette();
-        } elseif (count($palette) != 256) {
+        } elseif (count($this->palette) != 256) {
             throw new JJ2FileException('Episode palette should have 256 items');
-        } else {
-            $this->palette = $palette;
         }
 
-        $this->filename = $filename;
-        $this->data = file_get_contents($filename);
+        $this->data = file_get_contents($this->filename);
         $this->parse_header();
     }
 

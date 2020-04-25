@@ -33,23 +33,18 @@ class J2AFile extends JJ2File {
     /**
      * J2AFile constructor.
      *
-     * @param string $filename File name for J2A file to read
-     * @param array|NULL $palette An array of 256 `[r, g, b]` items. If left empty, calls `get_palette` with default
-     *                             parameters.
-     *
      * @throws JJ2FileException  If file does not exist or is not readable
      */
-    public function __construct(string $filename, array $palette = NULL) {
-        if (!is_file($filename) || !is_readable($filename)) {
-            throw new JJ2FileException('Not a readable file: '.$filename);
+    public function initialise(): void {
+        if (!is_file($this->filename) || !is_readable($this->filename)) {
+            throw new JJ2FileException('Not a readable file: '.$this->filename);
         }
 
-        if ($palette === NULL) {
+        if ($this->palette === NULL) {
             $this->parse_palette();
         }
 
-        $this->data = file_get_contents($filename);
-        $this->filename = $filename;
+        $this->data = file_get_contents($this->filename);
         $this->settings = [
             'set_current' => -1,
             'set_count' => -1,
@@ -365,8 +360,7 @@ class J2AFile extends JJ2File {
      * @return array    [frame info, frame image,animation info]
      */
     public function get_frame_as_crate(int $set, int $anim, int $frame = 0, array $palette = NULL, array $lut = NULL): array {
-        $path = dirname(__FILE__).'/../';
-        $crate_j2a = new J2AFile($path.'resources/crate.j2a', $palette);
+        $crate_j2a = new J2AFile($this->resource_folder.DIRECTORY_SEPARATOR.'crate.j2a', $palette);
         $crate = $crate_j2a->get_frame(0, 0, 0, $palette, $lut);
         $emblem_source = $this->get_frame($set, $anim, $frame, $palette, $lut);
 
@@ -418,8 +412,7 @@ class J2AFile extends JJ2File {
      * @return array    [frame info, frame image,animation info]
      */
     public function get_frame_as_monitor(int $set, int $anim, int $frame = 0, array $palette = NULL, array $lut = NULL): array {
-        $path = dirname(__FILE__).'/../';
-        $monitor_j2a = new J2AFile($path.'resources/Plus.j2a', $palette);
+        $monitor_j2a = new J2AFile($this->resource_folder.DIRECTORY_SEPARATOR.'Plus.j2a', $palette);
         $monitor = $monitor_j2a->get_frame(2, 4, 0, $palette, $lut);
         $emblem_source = $this->get_frame($set, $anim, $frame, $palette, $lut);
 
