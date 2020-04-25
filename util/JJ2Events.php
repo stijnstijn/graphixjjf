@@ -58,7 +58,7 @@ class JJ2Events {
         50 => ['Anims.j2a', 71, 3, true, false, false, false, 100, 'Carrot barrel'],
         51 => ['Anims.j2a', 71, 3, true, false, false, false, 100, '1up barrel'],
         52 => ['Anims.j2a', 71, 5, true, false, false, false, 100, 'Bomb Crate'],
-        53 => ['Anims.j2a', 71, 55, true, false, false, false, 66, 'Freezer Ammo+15'],
+        53 => ['Anims.j2a', 71, 55, true, false, false, false, 100, 'Freezer Ammo+15'],
         54 => ['Anims.j2a', 71, 54, true, false, false, false, 100, 'Bouncer Ammo+15'],
         55 => ['Anims.j2a', 71, 56, true, false, false, false, 100, 'Seeker Ammo+15'],
         56 => ['Anims.j2a', 71, 57, true, false, false, false, 100, '3Way Ammo+15'],
@@ -184,7 +184,7 @@ class JJ2Events {
         191 => ['Anims.j2a', 100, 0, true, false, false, false, 100, 'Tube Turtle'],
         192 => ['Anims.j2a', 71, 35, false, false, false, true, 100, 'Gem Ring'],
         193 => ['Anims.j2a', 84, 0, true, true, true, false, 100, 'Small Tree'],
-        195 => ['Anims.j2a', 105, 2, false, false, false, true, 100, 'Uterus'],
+        195 => ['Anims.j2a', 105, 0, false, false, false, true, 100, 'Uterus'],
         196 => ['Anims.j2a', 105, 7, true, false, false, false, 100, 'Crab'],
         197 => ['Anims.j2a', 112, 0, false, false, false, false, 100, 'Witch'],
         198 => ['Anims.j2a', 80, 1, false, false, false, true, 100, 'Rocket Turtle'],
@@ -763,6 +763,11 @@ class JJ2Events {
 
             case 110: //caterpillar
                 $event->flip_x = true;
+                break;
+
+            case 195: //uterus
+                $frame = $j2a->get_frame($set_ID, $anim_ID, $frame_ID);
+                imagerotate($frame[1], 90, imagecolorat($frame[1], 0, 0));
                 break;
 
             case 237: //BeeBoy
