@@ -70,9 +70,9 @@ class J2LFile extends JJ2File {
      */
     private int $height;
     /**
-     * @var array Cached layer maps - layer maps being arrays of tile IDs as used in the layer
+     * @var array Cached layer settings
      */
-    private array $map_cache;
+    private array $layers;
     /**
      * @var int MLLE version this level was saved with (for extra data) - 0 = no MLLE
      */
@@ -132,6 +132,25 @@ class J2LFile extends JJ2File {
         'WeaponVMega::Voranj' => 750,
         'WeaponVMega::Meteor' => 800
     ];
+    /**
+     * @var array  Array of player names to randomly choose from when rendering
+     * multiplayer sprites (these are all creators of the game etc)
+     */
+    private $player_names = [
+        'arjan',
+        'michiel',
+        'CliffyB',
+        'clifford',
+        'siren',
+        'AlexanderB',
+        'Nickadoo',
+        'Robert[AA]',
+        'Nando',
+        'Noogy',
+        'Wakeman',
+        'Spring',
+        'Jeh'
+    ];
 
 
     /**
@@ -169,6 +188,16 @@ class J2LFile extends JJ2File {
      */
     public function set_canonical_filename(string $canonical_filename): void {
         $this->canonical_filename = $canonical_filename;
+    }
+
+    /**
+     * Override list of player names to use when rendering multiplayer level
+     * sprites in the level preview
+     *
+     * @param string $player_names  Player names, as strings
+     */
+    public function set_player_names(array $player_names): void {
+        $this->player_names = $player_names;
     }
 
 
@@ -358,6 +387,7 @@ class J2LFile extends JJ2File {
                 $this->settings['layers'][$i]['texture_mode'] = (($this->settings['layers'][$i]['properties'] & 8) == 8);
                 $this->settings['layers'][$i]['texture_stars'] = (($this->settings['layers'][$i]['properties'] & 16) == 16);
                 $this->settings['layers'][$i]['texture_rgb'] = [];
+                $this->settings['layers'][$i]['name'] = '';
                 $this->settings['layers'][$i]['is_sprite'] = ($i == 4);
                 for ($j = 0; $j < 3; $j += 1) {
                     $this->settings['layers'][$i]['texture_rgb'][] = ord(substr($this->settings['layers'][$i]['texture_rgbs'], $j, 1));
@@ -365,6 +395,8 @@ class J2LFile extends JJ2File {
                 unset($this->settings['layers'][$i]['texture_rgbs'], $this->settings['layers'][$i]['properties']);
             }
 
+            $this->layers = $this->settings['layers'];
+            $this->settings['layers'] = &$this->layers;
             $settings['palette'] = NULL;
 
             try {
@@ -538,17 +570,14 @@ class J2LFile extends JJ2File {
 
         //update layer order
         $new_layers = [];
-        $new_cache = [];
         $new_ID = 1;
         $imported_layer_ID = 9;
         for ($i = 0; $i < $extra_layers_count; $i += 1) {
             $layer_ID = $data5->char();
             if ($layer_ID != 0xFF) {
                 $new_layers[$new_ID] = $this->settings['layers'][$layer_ID + 1];
-                $new_cache[$new_ID] = $this->map_cache[$layer_ID + 1];
             } else {
                 $new_layers[$new_ID] = $this->settings['layers'][$imported_layer_ID];
-                $new_cache[$new_ID] = $this->map_cache[$imported_layer_ID];
                 $imported_layer_ID += 1;
             }
 
@@ -563,8 +592,7 @@ class J2LFile extends JJ2File {
         }
 
         //save new layer order and map cache
-        $this->map_cache = $new_cache;
-        $this->settings['layers'] = $new_layers;
+        $this->layers = $new_layers;
 
         //find total number of tiles added to tileset
         $extra_tiles = 0;
@@ -881,17 +909,18 @@ class J2LFile extends JJ2File {
      * @param int $insertID Layer ID in this level the imported layer should get
      */
     protected function import_layer(J2LFile &$source_j2l, int $layerID, int $insertID): void {
-        $settings = $source_j2l->get_settings();
+        $source_settings = $source_j2l->get_settings();
 
         //make room for layer that is to be imported
-        for ($i = count($this->settings['layers']) - 1; $i > $insertID; $i -= 1) {
-            $this->settings['layers'][$i + 1] = $this->settings['layers'][$i];
-            $this->map_cache[$i + 1] = $this->map_cache[$i];
+        for ($i = count($this->layers) - 1; $i > $insertID; $i -= 1) {
+            $this->layers[$i + 1] = $this->layers[$i];
         }
 
-        $settings['layers'][$layerID]['is_sprite'] = false; //imported layers can never be the sprite layer
-        $this->settings['layers'][$insertID] = $settings['layers'][$layerID];
-        $this->map_cache[$insertID] = $source_j2l->get_map($layerID);
+        //calculate the tile map in advance
+        $source_j2l->get_map($layerID);
+
+        $source_settings['layers'][$layerID]['is_sprite'] = false; //imported layers can never be the sprite layer
+        $this->layers[$insertID] = $source_settings['layers'][$layerID];
     }
 
 
@@ -904,10 +933,8 @@ class J2LFile extends JJ2File {
      * @return array  Crop coordinates, [[x1, y1], [x2, y2]]
      */
     public function get_visible_box(): array {
-        $settings = $this->get_settings();
-
-        $layer4 = $settings['layers'][$settings['sprite_layer']];
-        $map = $this->get_map($settings['sprite_layer']);
+        $this->get_settings();
+        $layer4 = &$this->layers[$this->settings['sprite_layer']];
 
         $start_x = $start_y = PHP_INT_MAX;
         $end_x = $end_y = 0;
@@ -915,7 +942,7 @@ class J2LFile extends JJ2File {
 
         //set viewable area boundaries based on whether words consist of empty tiles
         $i = 0;
-        foreach ($map as $tile_ID) {
+        foreach ($this->get_map($this->settings['sprite_layer']) as $tile_ID) {
             if ($tile_ID != 0) {
                 $x = ($i % $layer4['width']) * 32;
                 $y = floor($i / $layer4['width']) * 32;
@@ -953,8 +980,8 @@ class J2LFile extends JJ2File {
      * @return array  Start position, as an `[x, y]` array of pixel coordinates
      */
     public function get_start_pos(): array {
-        $settings = $this->get_settings();
-        $layer4 = &$settings['layers'][$settings['sprite_layer']];
+        $this->get_settings();
+        $layer4 = &$this->layers[$this->settings['sprite_layer']];
         $tiles = $layer4['width'] * $layer4['height'];
 
         //events are stored per-tile
@@ -1114,13 +1141,14 @@ class J2LFile extends JJ2File {
      * @param int $layer_ID Layer ID to get tile map for
      *
      * @return array  Array of tile IDs
+     * @throws JJ2FileException  If the layer is supposed to have tiles, but no tile data is available
      */
     public function get_map(int $layer_ID): array {
         $settings = $this->get_settings();
 
-        if (!$settings['layers'][$layer_ID]['has_tiles']) {
-            $this->map_cache[$layer_ID] = [];
-        } elseif (!isset($this->map_cache[$layer_ID])) {
+        if (!$this->layers[$layer_ID]['has_tiles']) {
+            $this->layers[$layer_ID]['map'] = [];
+        } elseif (!isset($this->layers[$layer_ID]['map'])) {
             //skip layers before this one that we don't need right now
             $offset = 0;
             for ($i = 1; $i < $layer_ID; $i++) {
@@ -1129,9 +1157,8 @@ class J2LFile extends JJ2File {
                 $offset += !$l['has_tiles'] ? 0 : 2 * (ceil($l[$l_width_key] / 4) * $l['height']);
             }
 
-            $layer = $settings['layers'][$layer_ID];
-            $width_key = $layer['tile_width'] ? 'width_real' : 'width';
-            $word_count = ceil($layer[$width_key] / 4) * $layer['height'];
+            $width_key = $this->layers[$layer_ID]['tile_width'] ? 'width_real' : 'width';
+            $word_count = ceil($this->layers[$layer_ID][$width_key] / 4) * $this->layers[$layer_ID]['height'];
 
             $bytes = new BufferReader($this->get_substream(4));
             $bytes->seek($offset);
@@ -1149,10 +1176,14 @@ class J2LFile extends JJ2File {
 
             unset($map, $words);
 
-            $this->map_cache[$layer_ID] = $inflated_map;
+            if(!$inflated_map && $this->layers[$layer_ID]['has_tiles']) {
+                throw new JJ2FileException('Layer '.$layer_ID.' is marked as having tiles but map size is 0 after inflation');
+            }
+
+            $this->layers[$layer_ID]['map'] = $inflated_map;
         }
 
-        return $this->map_cache[$layer_ID];
+        return $this->layers[$layer_ID]['map'];
     }
 
 
@@ -1174,7 +1205,7 @@ class J2LFile extends JJ2File {
      */
     public function get_image($layers = [], bool $render_events = true, array $box = NULL) {
         $settings = $this->get_settings();
-        $layer4 = &$settings['layers'][$settings['sprite_layer']];
+        $layer4 = &$this->layers[$settings['sprite_layer']];
 
         if ($box === NULL) {
             $box = [[0, 0], [$layer4['width'] * 32, $layer4['height'] * 32]];
@@ -1202,11 +1233,14 @@ class J2LFile extends JJ2File {
         }
 
         foreach ($layers as $layer_ID) {
-            $layer = &$settings['layers'][$layer_ID];
+            $layer = &$this->layers[$layer_ID];
+            if(!$layer['has_tiles']) {
+                continue;
+            }
 
             if ($layer['texture_mode'] > 0) {
                 $this->render_textured_background($layer_ID, $image, $layer['texture_rgb']);
-            } elseif ($layer['has_tiles'] && (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']) || ($layer['tile_width'] && $layer['tile_height']))) {
+            } elseif (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']) || ($layer['tile_width'] && $layer['tile_height'])) {
                 //render only layers with x and y speed = 1 OR tileX and tileY
                 $this->render_layer($layer_ID, $image, false, $box);
 
@@ -1249,8 +1283,8 @@ class J2LFile extends JJ2File {
      * @return resource  Rendered background GD image resource
      */
     private function render_textured_background(int $layer_ID, $level_image, array $fade_color = [0, 0, 0]) {
-        $settings = $this->get_settings();
-        $layer = $settings['layers'][$layer_ID];
+        $this->get_settings();
+        $layer = &$this->layers[$layer_ID];
 
         //this resolution is the largest that doesn't have noticeable slowdown, experiments show
         $screen = imagecreatetruecolor(1600, 1200);
@@ -1305,11 +1339,16 @@ class J2LFile extends JJ2File {
      * @param array|NULL $box Crop box; if left NULL, the object's `$box` field is used.
      *
      * @return  resource The level preview image.
+     * @throws JJ2FileException  If the layer to be rendered has no tiles in it
      */
     private function render_layer(int $layer_ID, $image, bool $is_mask = false, array $box = NULL) {
-        $settings = $this->get_settings();
-        $layer = $settings['layers'][$layer_ID];
-        $layer4 = &$settings['layers'][$settings['sprite_layer']];
+        $this->get_settings();
+        $layer = $this->layers[$layer_ID];
+        if(!$layer['has_tiles']) {
+            throw new JJ2FileException('Cannot render layer '.$layer_ID.'; has no tiles');
+        }
+
+        $layer4 = &$this->layers[$this->settings['sprite_layer']];
 
         if ($box === NULL) {
             $box = $this->box;
@@ -1332,6 +1371,13 @@ class J2LFile extends JJ2File {
 
         if ($layer['tile_height'] && $layer['height'] < $layer4['height'] && $layer['speed_y'] != 65536) {
             $expand_vertical = max(0, $layer4['height'] - $layer['height']) / 2;
+        }
+
+        if(!$map) {
+            //there have been levels with layers that had has_tiles = true
+            //but also had no tiles (e.g. HH18_Level04.j2l)... not sure what's
+            //up with those
+            return $image;
         }
 
         if ($expand_horizontal > 0 || $expand_vertical > 0) {
@@ -1445,12 +1491,33 @@ class J2LFile extends JJ2File {
             $event_mgr->redirect($from, $to);
         }
 
-        $layer4 = &$this->settings['layers'][$settings['sprite_layer']];
+        $layer4 = &$this->layers[$settings['sprite_layer']];
         $tiles = $layer4['width'] * $layer4['height'];
         $tiles_x = $layer4['width'];
         $tiles_y = $layer4['height'];
         $offset_x = 0 - $this->box[0][0];
         $offset_y = 0 - $this->box[0][1];
+
+        //some events are rendered differently if we're playing in multiplayer
+        //(such as player sprites) but to determine if this is an MP level we
+        //will loop through the events once to look for MP-specific events
+        $level_is_multiplayer = false;
+        $events = new BufferReader($this->get_substream(2));
+        for ($i = 0; $i < $tiles; $i += 1) {$events->seek($i * 4);
+            $event_bytes = $events->uint32();
+            $event_ID = $event_bytes & 255;
+
+            if(in_array($event_ID, [31, 244])) {
+                $level_is_multiplayer = true;
+                break;
+            }
+
+            $difficulty = JJ2Events::get_event_param($event_bytes, 8, 2);
+            if($difficulty == 3) {
+                $level_is_multiplayer = true;
+                break;
+            }
+        }
 
         //events are stored per-tile
         $margin = 64;
