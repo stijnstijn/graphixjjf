@@ -20,7 +20,8 @@
   },
   "require": {
     "php": "^7.4",
-    "ext-gd": "*"
+    "ext-gd": "*",
+    "ext-zlib": "*",
   },
   "autoload": {
     "files": [
