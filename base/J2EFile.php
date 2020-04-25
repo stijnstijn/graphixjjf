@@ -38,8 +38,8 @@ class J2EFile extends JJ2File {
         }
 
         if ($this->palette === NULL) {
-            if (!is_readable($this->resource_folder.'/Jazz2.pal')) {
-                throw new JJ2FileException('No episode palette was given, trying to read Jazz2.pal, but file is not readable');
+            if (!is_readable($this->resource_folder.'/Menu.pal')) {
+                throw new JJ2FileException('No episode palette was given, trying to read Menu.pal, but file is not readable');
             }
             $this->parse_palette();
         } elseif (count($this->palette) != 256) {
