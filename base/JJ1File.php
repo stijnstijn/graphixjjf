@@ -33,17 +33,14 @@ abstract class JJ1File implements JJFile {
     /**
      * JJ1File constructor.
      *
-     * @param string $filename File to read
-     *
      * @throws JJ1FileException If file could not be read
      */
-    public function __construct(string $filename) {
+    public function initialise(): void {
 
-        if (is_file($filename) && is_readable($filename)) {
-            $this->filename = $filename;
+        if (is_file($this->filename) && is_readable($this->filename)) {
             $this->data = file_get_contents($this->filename);
         } else {
-            throw new JJ1FileException($filename.' is not a readable file.');
+            throw new JJ1FileException($this->filename.' is not a readable file.');
         }
 
         $this->parse_header();
