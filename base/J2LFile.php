@@ -140,16 +140,14 @@ class J2LFile extends JJ2File {
         'arjan',
         'michiel',
         'CliffyB',
-        'clifford',
-        'siren',
+        'Noogy',
         'AlexanderB',
         'Nickadoo',
         'Robert[AA]',
         'Nando',
-        'Noogy',
-        'Wakeman',
         'Spring',
-        'Jeh'
+        'Jeh',
+        'siren'
     ];
 
 
@@ -194,10 +192,20 @@ class J2LFile extends JJ2File {
      * Override list of player names to use when rendering multiplayer level
      * sprites in the level preview
      *
-     * @param string $player_names  Player names, as strings
+     * @param array $player_names  Player names, as strings
      */
     public function set_player_names(array $player_names): void {
         $this->player_names = $player_names;
+    }
+
+    /**
+     * Add player name to names to use when rendering multiplayer level
+     * sprites in the level preview
+     *
+     * @param string $player_name  Player name to add
+     */
+    public function add_player_name(string $player_name): void {
+        $this->player_names[] = $player_name;
     }
 
 
@@ -1472,6 +1480,7 @@ class J2LFile extends JJ2File {
      * @throws JJ2FileException  If tileset mask is not available
      */
     private function render_events($image) {
+
         if (!$this->has_tileset() || !isset($this->tileset_image_mask)) {
             throw new JJ2FileException('You need to load the tileset mask image before calling J2LFile::render_events()');
         }
@@ -1491,33 +1500,13 @@ class J2LFile extends JJ2File {
             $event_mgr->redirect($from, $to);
         }
 
+        shuffle($this->player_names);
         $layer4 = &$this->layers[$settings['sprite_layer']];
         $tiles = $layer4['width'] * $layer4['height'];
         $tiles_x = $layer4['width'];
         $tiles_y = $layer4['height'];
         $offset_x = 0 - $this->box[0][0];
         $offset_y = 0 - $this->box[0][1];
-
-        //some events are rendered differently if we're playing in multiplayer
-        //(such as player sprites) but to determine if this is an MP level we
-        //will loop through the events once to look for MP-specific events
-        $level_is_multiplayer = false;
-        $events = new BufferReader($this->get_substream(2));
-        for ($i = 0; $i < $tiles; $i += 1) {$events->seek($i * 4);
-            $event_bytes = $events->uint32();
-            $event_ID = $event_bytes & 255;
-
-            if(in_array($event_ID, [31, 244])) {
-                $level_is_multiplayer = true;
-                break;
-            }
-
-            $difficulty = JJ2Events::get_event_param($event_bytes, 8, 2);
-            if($difficulty == 3) {
-                $level_is_multiplayer = true;
-                break;
-            }
-        }
 
         //events are stored per-tile
         $margin = 64;
@@ -1606,6 +1595,46 @@ class J2LFile extends JJ2File {
 
             if ($event->flip_y) {
                 imageflip($event->sprite[1], IMG_FLIP_VERTICAL);
+            }
+
+            //draw player names for the heck of it
+            if($event_ID == 31 || ($settings['is_multiplayer'] && in_array($event_ID, [29, 30, 32]))) {
+                if(!isset($this->name_index)) {
+                    $this->name_index = 0;
+                }
+
+                //don't repeat names multiple times, that would be unrealistic!!
+                $suffix = '';
+                if($this->name_index >= count($this->player_names)) {
+                    $suffix = ceil($this->name_index / (count($this->player_names) - 1));
+                }
+
+                $name = $this->player_names[$this->name_index % (count($this->player_names) - 1)].$suffix;
+
+                $label = new JJ2Text($name, $this->palette, $this->resource_folder);
+                $label = $label->get_image(JJ2Text::SIZE_NORMAL);
+
+                //create new sprite which combines the rabbit sprite and the name label
+                $extra_height = 13 + 25 + $event->sprite[0]['hotspoty'];
+                $extra_width = max($event->sprite[0]['width'], imagesx($label)) - $event->sprite[0]['width'];
+
+                $event->sprite[0]['width'] += $extra_width;
+                $event->sprite[0]['height'] += $extra_height;
+                $event->sprite[0]['hotspoty'] += $extra_height;
+                $event->sprite[0]['hotspotx'] += floor($extra_width / 2);
+
+                $sprite_with_label = imagecreatetruecolor($event->sprite[0]['width'], $event->sprite[0]['height']);
+                imagefill($sprite_with_label, 0, 0, imagecolorallocatealpha($sprite_with_label, 0, 0, 0, 127));
+                imagealphablending($sprite_with_label, true);
+
+                imagecopy($sprite_with_label, $event->sprite[1], floor($extra_width / 2), $extra_height, 0, 0, imagesx($event->sprite[1]), imagesy($event->sprite[1]));
+                imagecopy($sprite_with_label, $label, 0, 0, 0, 0, imagesx($label), imagesy($label));
+
+                //adjust offset so it is still drawn at the original position
+                $event->sprite[1] = $sprite_with_label;
+                $event->offset_y -= $extra_height;
+
+                $this->name_index += 1;
             }
 
             //simulate gravity if it applies, basically just increase y position until a mask is met
