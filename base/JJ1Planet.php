@@ -57,7 +57,7 @@ class JJ1Planet extends JJ1File {
      *
      * @return int  GD Image resource
      */
-    function get_preview(): int {
+    function get_preview() {
         return $this->get_image();
     }
 }

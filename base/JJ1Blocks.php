@@ -121,6 +121,10 @@ class JJ1Blocks extends JJ1File
      * @return resource  GD Image resource
      */
     public function get_preview() {
-        return $this->get_image();
+        $tiles = $this->get_image();
+        $blue_bg = imagecreatetruecolor(imagesx($tiles), imagesy($tiles));
+        imagefill($blue_bg, 0, 0, imagecolorallocate($blue_bg, 87, 0, 203));
+        imagecopy($blue_bg, $tiles, 0, 0, 0, 0, imagesx($tiles), imagesy($tiles));
+        return $blue_bg;
     }
 }

@@ -111,12 +111,13 @@ abstract class JJ2File implements JJFile {
      * Get JASC-format palette from file
      *
      * @param string|NULL $palette_file File path to load palette from. Uses `Jazz2.pal` if NULL
+     * @param bool $force Force loading, even if palette already exists
      *
      * @return array                     Palette file, 256 entries with `[r, g, b]` structure
      * @throws JJ2FileException          If file path given does not work
      */
-    public function parse_palette(string $palette_file = NULL): array {
-        if (!$this->palette) {
+    public function parse_palette(string $palette_file = NULL, bool $force = false): array {
+        if (!$this->palette || $force) {
             if ($palette_file === NULL) {
                 $palette_file = $this->resource_folder.DIRECTORY_SEPARATOR.'Jazz2.pal';
             }

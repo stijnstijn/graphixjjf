@@ -216,7 +216,9 @@ class J2LFile extends JJ2File {
      * path is readable. How they are handled and parsed is determined by methods that
      * are called later.
      *
-     * @param array $paths An array of file paths to load
+     * @param array $paths An array of file paths to load. The paths can be string or
+     * arrays. In the latter case, the arrays should have two items; first the
+     * *path* (e.g. MySwampsEdit.j2t), second the *canonical name* (e.g. Swamps.j2t).
      *
      * @throws JJ2FileException  If a given file path is not readable.
      */

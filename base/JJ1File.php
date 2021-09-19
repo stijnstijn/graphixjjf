@@ -29,6 +29,19 @@ abstract class JJ1File implements JJFile {
      */
     protected array $settings = [];
 
+    /**
+     * JJ1File constructor.
+     *
+     * Sets up the common object properties and calls the file-specific
+     * initialisation method.
+     *
+     * @param string $filename Filename to work with
+     */
+    public function __construct(string $filename) {
+        $this->filename = $filename;
+        $this->initialise();
+    }
+
 
     /**
      * JJ1File constructor.
