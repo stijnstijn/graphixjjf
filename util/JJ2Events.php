@@ -196,7 +196,7 @@ class JJ2Events {
         204 => ['Anims.j2a', 74, 0, true, true, true, false, 100, 'Psych pole'],
         205 => ['Anims.j2a', 28, 0, true, true, true, false, 100, 'Diamondus pole'],
         209 => ['Anims.j2a', 48, 0, false, false, false, false, 100, 'Fruit Platform'],
-        210 => ['Anims.j2a', 9, 0, false, false, false, false, 100, 'Boll Platform'],
+        210 => ['Anims.j2a', 11, 0, false, false, false, false, 100, 'Boll Platform'],
         211 => ['Anims.j2a', 51, 0, false, false, false, false, 100, 'Grass Platform'],
         212 => ['Anims.j2a', 73, 0, false, false, false, false, 100, 'Pink Platform'],
         213 => ['Anims.j2a', 87, 0, false, false, false, false, 100, 'Sonic Platform'],
@@ -734,6 +734,74 @@ class JJ2Events {
                         $lut[$j] = $index + $shift;
                     }
                 }
+                break;
+
+            case 192: // gem ring
+                $length = self::get_event_param($event_params, 0, 5);
+                $event_num = self::get_event_param($event_params,10, 8);
+
+                if($event_num == 0) {
+                    // default to red gem
+                    $event_num = $this->resolve_redirect(63);
+                } else {
+                    $event_num = $this->resolve_redirect($event_num);
+                }
+
+                if($event_num == 192) {
+                    // ha ha no
+                    break;
+                }
+
+                if($length == 0) {
+                    $length = 8;
+                }
+
+                // the ring is about 96x96, but get a larger image to account for the sprites in the ring being larger
+                // than that, possibly. basically, we're drawing a ring of sprites with a 96px radius and all sprites
+                // centred on some point on that ring
+                $ring_event = $this->get_event($event_num);
+                $gem_ring = $this->get_empty_image(256, 256);
+
+                // we need some space to avoid clipping after rotating, so give the sprite 50% margin
+                $gem_sprite = $ring_event->sprite[1];
+                $rotatable = $this->get_empty_image(imagesx($gem_sprite) * 2, imagesy($gem_sprite) * 2);
+                $center_x = (imagesx($rotatable) / 2) - (imagesx($gem_sprite) / 2);
+                $center_y = (imagesx($rotatable) / 2) - (imagesx($gem_sprite) / 2);
+                imagecopy($rotatable, $gem_sprite, $center_x, $center_y, 0, 0, imagesx($gem_sprite), imagesy($gem_sprite));
+
+                // parameters for rotating... this seems reasonably close to what jj2 does
+                $angle = 25;
+                $angle_step = deg2rad(360 / $length);
+                $radius = 45;
+                $transparent = imagecolorallocatealpha($rotatable, $this->palette[0][0], $this->palette[0][1], $this->palette[0][2], 127);
+
+                // render sprites in a ring
+                for($i = 0; $i < $length; $i += 1) {
+                    $x_offset = cos($angle) * $radius;
+                    $y_offset = tan($angle) * $x_offset;
+
+                    $x = (imagesx($gem_ring) / 2) + $x_offset;
+                    $y = (imagesy($gem_ring) / 2) - $y_offset;
+
+                    $angled_sprite = imagerotate($rotatable, (rad2deg($angle) - 90) % 360, $transparent);
+                    //$angled_sprite = $ring_event->sprite[1];
+                    $x -= imagesx($angled_sprite) / 2;
+                    $y -= imagesy($angled_sprite) / 2;
+
+                    imagecopy($gem_ring, $angled_sprite, $x, $y, 0, 0, imagesx($angled_sprite), imagesy($angled_sprite));
+
+                    $angle += $angle_step;
+                }
+
+                $frame[1] = $gem_ring;
+                $frame[0] = [
+                    'width' => imagesx($gem_ring),
+                    'height' => imagesy($gem_ring),
+                    'hotspotx' => -(imagesx($gem_ring) / 2),
+                    'hotspoty' => -(imagesy($gem_ring) / 2),
+                    'coldspotx' => 0,
+                    'coldspoty' => 0
+                ];
                 break;
 
             case 128: //moths
