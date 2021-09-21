@@ -196,7 +196,7 @@ class JJ2Events {
         204 => ['Anims.j2a', 74, 0, true, true, true, false, 100, 'Psych pole'],
         205 => ['Anims.j2a', 28, 0, true, true, true, false, 100, 'Diamondus pole'],
         209 => ['Anims.j2a', 48, 0, false, false, false, false, 100, 'Fruit Platform'],
-        210 => ['Anims.j2a', 11, 0, false, false, false, false, 100, 'Boll Platform'],
+        210 => ['Anims.j2a', 10, 0, false, false, false, false, 100, 'Boll Platform'],
         211 => ['Anims.j2a', 51, 0, false, false, false, false, 100, 'Grass Platform'],
         212 => ['Anims.j2a', 73, 0, false, false, false, false, 100, 'Pink Platform'],
         213 => ['Anims.j2a', 87, 0, false, false, false, false, 100, 'Sonic Platform'],
