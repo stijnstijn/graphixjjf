@@ -20,7 +20,7 @@ composer install j2o/graphixjjf
 
 Then use it, for example, like this:
 
-```$php
+```php
 <?php
 require 'vendor/autoload.php';
 use J2o\Lib\J2AFile;
