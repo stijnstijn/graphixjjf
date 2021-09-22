@@ -1243,21 +1243,25 @@ class J2LFile extends JJ2File {
             $this->load_tileset();
         }
 
+        $have_rendered_sprite_layer = false;
         foreach ($layers as $layer_ID) {
             $layer = &$this->layers[$layer_ID];
             if(!$layer['has_tiles']) {
                 continue;
             }
 
-            if ($layer['texture_mode'] > 0) {
+            if ($layer['texture_mode'] > 0 && !$have_rendered_sprite_layer) {
                 $this->render_textured_background($layer_ID, $image, $layer['texture_rgb']);
             } elseif (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']) || ($layer['tile_width'] && $layer['tile_height'])) {
                 //render only layers with x and y speed = 1 OR tileX and tileY
                 $this->render_layer($layer_ID, $image, false, $box);
 
-                if ($render_events && $layer_ID == $settings['sprite_layer']) {
-                    $this->load_level_masks();
-                    $image = $this->render_events($image);
+                if ($layer_ID == $settings['sprite_layer']) {
+                    $have_rendered_sprite_layer = true;
+                    if ($render_events) {
+                        $this->load_level_masks();
+                        $image = $this->render_events($image);
+                    }
                 }
 
             }
@@ -1552,7 +1556,7 @@ class J2LFile extends JJ2File {
             }
 
             if ($pos_x < imagesx($this->level_mask) && $pos_y < imagesy($this->level_mask) - 48) {
-                $on_ground = imagecolorat($this->level_mask, $pos_x, $pos_y + 48) == 0;
+                $on_ground = imagecolorat($this->level_mask, $pos_x, max(0, $pos_y + 48)) == 0;
             } else {
                 $on_ground = false;
             }
@@ -1642,7 +1646,7 @@ class J2LFile extends JJ2File {
 
             //simulate gravity if it applies, basically just increase y position until a mask is met
             if ($event->feels_gravity) {
-                $test_x = max($pos_x + $offset_x - $event->sprite[0]['coldspotx'], 0);
+                $test_x = min($tiles_x * 32, max($pos_x + $offset_x - $event->sprite[0]['coldspotx'], 0));
                 while ($pos_y < (($tiles_y * 32) - 1) && imagecolorat($this->level_mask, $test_x, $pos_y) != 0) {
                     $pos_y += 1;
                 }
