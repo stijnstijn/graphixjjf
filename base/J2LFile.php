@@ -953,7 +953,7 @@ class J2LFile extends JJ2File {
         //set viewable area boundaries based on whether words consist of empty tiles
         $i = 0;
         foreach ($this->get_map($this->settings['sprite_layer']) as $tile_ID) {
-            if ($tile_ID != 0) {
+            if ($tile_ID['tile'] != 0) {
                 $x = ($i % $layer4['width']) * 32;
                 $y = floor($i / $layer4['width']) * 32;
                 $completely_empty = false;
@@ -964,6 +964,7 @@ class J2LFile extends JJ2File {
             }
             $i += 1;
         }
+
 
         if ($completely_empty) {
             //whatever
