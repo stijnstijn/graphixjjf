@@ -118,7 +118,6 @@ class JJ2Events {
         114 => ['Anims.j2a', 7, 4, true, false, false, false, 100, 'Bilsy Boss'],
         115 => ['Anims.j2a', 83, 2, true, false, false, false, 100, 'Skeleton'],
         116 => ['Anims.j2a', 29, 0, true, false, false, false, 100, 'Doggy Dogg'],
-        116 => ['Anims.j2a', 29, 0, true, false, false, false, 100, 'Doggy Dogg'],
         117 => ['Anims.j2a', 103, 7, true, false, false, false, 100, 'Norm Turtle'],
         118 => ['Anims.j2a', 53, 0, true, false, false, false, 100, 'Helmut'],
         120 => ['Anims.j2a', 24, 0, true, false, false, false, 100, 'Demon'],
@@ -221,8 +220,9 @@ class JJ2Events {
         248 => ['Anims.j2a', 115, 7, true, false, false, false, 100, 'Xmas Norm Turtle'],
         249 => ['Anims.j2a', 114, 4, true, false, false, false, 100, 'Xmas Lizard'],
         250 => ['Anims.j2a', 114, 2, false, false, false, true, 100, 'Xmas Float Lizard'],
-        251 => ['Anims.j2a', 117, 0, false, false, false, true, 100, 'Addon DOG'], //actually a ghost
+        251 => ['Anims.j2a', 113, 0, true, false, false, false, 100, 'Addon DOG'], //actually xmas bilsy
         252 => ['Anims.j2a', 116, 1, true, false, false, false, 100, 'Addon Sparks'], //actually a cat
+        253 => ['Anims.j2a', 117, 0, false, false, false, true, 100, 'Blue Ghost'], //actually a ghost
         //the next few are 'meta' events without their own event but may replace
         //other events with a sprite from Plus.j2a, event ID >= 300
         300 => ['Anims.j2a', 71, 58, true, false, false, false, 100, 'TNT Ammo+15'],
