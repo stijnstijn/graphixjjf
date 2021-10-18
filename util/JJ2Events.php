@@ -348,6 +348,11 @@ class JJ2Events {
      * @var string  Resource folder, containing animation libraries
      */
     private string $resource_folder = '';
+    /**
+     * @var array  Palette remappings for specific sprites, with sprite setIDs as keys and
+     * each setID being an array with animIDs as key and a 256-colour palette as value
+     */
+    private array $palette_remapping = [];
 
 
     /**
@@ -355,10 +360,11 @@ class JJ2Events {
      *
      * @param array $palette
      */
-    public function __construct(array $palette, string $resource_folder) {
+    public function __construct(array $palette, string $resource_folder, $palette_remapping = []) {
         $this->j2a = [];
         $this->palette = $palette;
         $this->resource_folder = $resource_folder;
+        $this->palette_remapping = $palette_remapping;
     }
 
     /**
@@ -374,11 +380,12 @@ class JJ2Events {
     public function get_library(string $filename): J2AFile {
         $path = $this->resource_folder.DIRECTORY_SEPARATOR.$filename;
         if (!file_exists($path)) {
-            throw new JJ2FileException('Animation library '.$filename.' not found.');
+            throw new JJ2FileException('Animation library '.$path.' not found.');
         }
 
         if (!array_key_exists($filename, $this->j2a)) {
             $this->j2a[$filename] = new J2AFile($path, $this->palette);
+            $this->j2a[$filename]->load_remapping($this->palette_remapping);
         }
 
         return $this->j2a[$filename];

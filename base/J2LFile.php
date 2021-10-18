@@ -90,6 +90,11 @@ class J2LFile extends JJ2File {
      */
     private array $redirect = [];
     /**
+     * @var array  Palette remappings for specific sprites, with sprite setIDs as keys and
+     * each setID being an array with animIDs as key and a 256-colour palette as value
+     */
+    private array $palette_remapping = [];
+    /**
      * @var array  Supported custom weapons. Keys are IDs, either as references in MLLE's
      * custom weapons code or via se::[ID].setAsWeapon. Values are event IDs for the +3
      * pickup for that weapon.
@@ -502,16 +507,63 @@ class J2LFile extends JJ2File {
             $this->mlle_settings['palette'] = NULL;
         }
 
-        //remapped event palettes; skip for now...
-        $recolorable_events = ($version >= 0x105) ? 20 : 11;
-        for ($i = 0; $i < $recolorable_events; $i += 1) {
+        // remapped event palettes
+        // we do this on a per-sprite basis; for each event a number of sprites that are to be recoloured
+        // can be defined (more for later versions of MLLE)
+        $recolorable_sprites = [
+            [[72, 0]], // carrot bump
+            [[72, 2]], // 500 bump
+            [[17, 0]], // carrotus pole
+            [[28, 0]], // diamondus pole
+            [[72, 4], [72, 5]], // paddles
+            [[58, 0]], // jungle pole
+            null, // JJ2+ leaf
+            [[74, 0]], // psych pole
+            [[84, 0]], // small tree
+            null, // snow
+            null, // rain
+        ];
+
+        if ($version >= 0x105) {
+            $recolorable_sprites = array_merge($recolorable_sprites, [
+                [[10, 0], [10, 1]], // boll platform
+                [[48, 0], [48, 1]], // fruit platform
+                [[51, 0], [51, 1]], // grass platform
+                [[73, 0], [73, 1]], // pink platform
+                [[87, 0], [87, 1]], // sonic platform
+                [[95, 0], [95, 1]], // spike platform
+                [[93, 0], [93, 1]], // spike boll
+                [[93, 0], [93, 1]], // 3d spike boll
+                [[106, 1]], // swinging vine
+            ]);
+        }
+
+        // stored as
+        $sprite_palettes = [];
+        foreach($recolorable_sprites as $animations) {
             $recolor_animation = $data5->bool();
             if (!$recolor_animation) {
+                // no new palette for this event
                 continue;
             }
 
-            $data5->skip(256); //todo
+            if(!$animations) {
+                // no sprites we will ever render, skip further data for this recolour
+                $data5->skip(256);
+                continue;
+            }
+
+            $remapping = $data5->char(256);
+            foreach($animations as $animation) {
+                list($setID, $animID) = $animation;
+                if(!isset($sprite_palettes[$setID])) {
+                    $sprite_palettes[$setID] = [];
+                }
+
+                $sprite_palettes[$setID][$animID] = $remapping;
+            }
         }
+        $this->palette_remapping = $sprite_palettes;
 
 
         //load extra tileset data
@@ -1487,13 +1539,12 @@ class J2LFile extends JJ2File {
      * @throws JJ2FileException  If tileset mask is not available
      */
     private function render_events($image) {
-
         if (!$this->has_tileset() || !isset($this->tileset_image_mask)) {
             throw new JJ2FileException('You need to load the tileset mask image before calling J2LFile::render_events()');
         }
 
         $settings = $this->get_settings();
-        $event_mgr = new JJ2Events($this->settings['palette'], $this->resource_folder);
+        $event_mgr = new JJ2Events($this->settings['palette'], $this->resource_folder, $this->palette_remapping);
 
         if (!empty($this->mlle_settings) && isset($this->mlle_settings['weapons']) && count($this->mlle_settings['weapons']) >= 9) {
             for ($i = 7; $i <= 9; $i += 1) {

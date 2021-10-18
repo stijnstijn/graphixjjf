@@ -29,6 +29,11 @@ class J2AFile extends JJ2File {
      * @var array  File settings, parsed from header
      */
     protected array $settings;
+    /**
+     * @var array  Palette remappings for specific sprites, with sprite setIDs as keys and
+     * each setID being an array with animIDs as key and a 256-colour palette as value
+     */
+    private array $palette_remapping = [];
 
     /**
      * J2AFile constructor.
@@ -55,6 +60,16 @@ class J2AFile extends JJ2File {
         $this->parse_header();
     }
 
+    /**
+     * Load palette remap for specific set and anim IDs
+     *
+     * @param array $remapping Palette remappings for specific sprites, with sprite setIDs as keys and
+     * each setID being an array with animIDs as key and a 256-colour palette as value
+     */
+    public function load_remapping($remapping) {
+        $this->palette_remapping = $remapping;
+    }
+
 
     /**
      * Generate sprite sheet
@@ -74,6 +89,9 @@ class J2AFile extends JJ2File {
             $this->load_set($s);
             for ($a = 0; $a < $set['anim_count']; $a += 1) {
                 $frame = $this->get_frame($s, $a, 0);
+                if($frame[0] === NULL) {
+                    continue;
+                }
                 $row_w += $frame[0]['width'];
                 if ($row_w > $w) {
                     $row_w = $frame[0]['width'];
@@ -207,6 +225,14 @@ class J2AFile extends JJ2File {
             $palette = $this->palette;
         }
 
+        if(array_key_exists($set, $this->palette_remapping) && array_key_exists($anim, $this->palette_remapping[$set])) {
+            $new_palette = [];
+            foreach($this->palette_remapping[$set][$anim] as $index) {
+                $new_palette[] = $palette[$index];
+            }
+            $palette = $new_palette;
+        }
+
         $bytes = new BufferReader($this->get_substream(1));
         for ($i = 0; $i < $anim; $i += 1) {
             $bytes->seek($i * 8);
@@ -224,20 +250,22 @@ class J2AFile extends JJ2File {
             'reserved?' => $bytes->long()
         ];
 
+        if($anim_settings['framecount'] == 0) {
+            return [NULL, NULL, NULL];
+        }
+
         $bytes->load($this->get_substream(2));
         $bytes->seek($frameoffset * 24);
-        $frame_settings = [
-            'width' => $bytes->short(),
-            'height' => $bytes->short(),
-            'coldspotx' => $bytes->int16(),
-            'coldspoty' => $bytes->int16(),
-            'hotspotx' => $bytes->int16(),
-            'hotspoty' => $bytes->int16(),
-            'gunspotx' => $bytes->int16(),
-            'gunspoty' => $bytes->int16(),
-            'offset_image' => $bytes->long(),
-            'offset_mask' => $bytes->long()
-        ];
+        $frame_settings['width']= $bytes->short();
+        $frame_settings['height']= $bytes->short();
+        $frame_settings['coldspotx']= $bytes->int16();
+        $frame_settings['coldspoty']= $bytes->int16();
+        $frame_settings['hotspotx']= $bytes->int16();
+        $frame_settings['hotspoty']= $bytes->int16();
+        $frame_settings['gunspotx']= $bytes->int16();
+        $frame_settings['gunspoty']= $bytes->int16();
+        $frame_settings['offset_image']= $bytes->long();
+        $frame_settings['offset_mask']= $bytes->long();
 
         $pixelmap = $this->make_pixelmap(substr($this->get_substream(3), $frame_settings['offset_image']));
 
