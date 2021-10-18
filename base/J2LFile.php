@@ -1044,7 +1044,7 @@ class J2LFile extends JJ2File {
      * Loops through all start positions found in the level and returns one at random. If none are found, the default
      * position close to the upper left corner is returned.
      *
-     * @return array  Start position, as an `[x, y]` array of pixel coordinates
+     * @return array  Start position and rabbit, as an `[[x, y], rabbit]` array (pixel coordinates)
      */
     public function get_start_pos(): array {
         $this->get_settings();
@@ -1057,14 +1057,15 @@ class J2LFile extends JJ2File {
         for ($i = 0; $i < $tiles; $i += 1) {
             $event_ID = $events->long() & 255; //event ID = first 8 bits
 
-            if (in_array($event_ID, [29, 30, 31])) {
+            if (in_array($event_ID, [29, 30, 31, 32])) {
+                $rabbit = [29 => 'jazz', 30 => 'spaz', 31 => ['jazz', 'spaz', 'lori'][rand(0,2)], 32 => 'lori'][$event_ID];
                 $x = ($i % $layer4['width']) * 32;
                 $y = floor($i / $layer4['width']) * 32;
-                $positions[] = [$x, $y];
+                $positions[] = [[$x, $y], $rabbit];
             }
         }
 
-        $position = count($positions) > 0 ? $positions[array_rand($positions)] : [96, 32];
+        $position = count($positions) > 0 ? $positions[array_rand($positions)] : [[96, 32], 'jazz'];
 
         return $position;
     }
@@ -1264,7 +1265,7 @@ class J2LFile extends JJ2File {
      * @param mixed $layers Which layer to render. Can be either an integer or an array; if it is an array,
      *                                each element should be n with 8 >= n > 0. By default all layers are rendered.
      * @param boolean $render_events Whether to render event sprites as well.
-     * @param array $box Bounding box within the level to render, as pixel coordinates [[x, y], [x, y]]
+     * @param array|null $box Bounding box within the level to render, as pixel coordinates [[x, y], [x, y]]
      *
      * @return  resource  An image resource, to be used with for example imagepng().
      *
@@ -1289,7 +1290,10 @@ class J2LFile extends JJ2File {
 
         $image = imagecreatetruecolor($this->width, $this->height);
 
-        if ($layers === []) {
+        if($layers === NULL) {
+            return $image;
+        }
+        elseif ($layers === []) {
             $layers = array_reverse(array_keys($this->settings['layers']));
         } else {
             $layers = array_unique($layers);
@@ -1348,8 +1352,10 @@ class J2LFile extends JJ2File {
 
         $settings = $this->get_settings();
 
-        $this->level_mask = imagecreatetruecolor($this->width, $this->height);
-        $this->level_mask = $this->render_layer($settings['sprite_layer'], $this->level_mask, true);
+        $sprite_layer = $this->layers[$this->settings['sprite_layer']];
+        $this->level_mask = imagecreatetruecolor($sprite_layer['width'] * 32, $sprite_layer['height'] * 32);
+        $this->level_mask = $this->render_layer($settings['sprite_layer'], $this->level_mask, true, [[0, 0], [imagesx($this->level_mask), imagesy($this->level_mask)]]);
+        imagepng($this->level_mask, 'mask.png');
     }
 
 
@@ -1454,11 +1460,12 @@ class J2LFile extends JJ2File {
      * @param resource $image The image to render to. May contain background layers to draw on top of!
      * @param boolean $is_mask Are we rendering the layer as a mask?
      * @param array|NULL $box Crop box; if left NULL, the object's `$box` field is used.
+     * @param bool $expand  Auto-expand layer map if it tiles
      *
      * @return  resource The level preview image.
      * @throws JJ2FileException  If the layer to be rendered has no tiles in it
      */
-    private function render_layer(int $layer_ID, $image, bool $is_mask = false, array $box = NULL) {
+    private function render_layer(int $layer_ID, $image, bool $is_mask = false, array $box = NULL, $expand=true) {
         $this->get_settings();
         $layer = $this->layers[$layer_ID];
         if(!$layer['has_tiles']) {
@@ -1497,7 +1504,7 @@ class J2LFile extends JJ2File {
             return $image;
         }
 
-        if ($expand_horizontal > 0 || $expand_vertical > 0) {
+        if ($expand && ($expand_horizontal > 0 || $expand_vertical > 0)) {
             $map = $this->expand_map($map, $layer['width_real'], $layer['height'], floor($expand_vertical), ceil($expand_horizontal), ceil($expand_vertical), floor($expand_horizontal));
             $layer['width_real'] += floor($expand_horizontal) + ceil($expand_horizontal);
             $layer['height'] += floor($expand_vertical) + ceil($expand_vertical);
@@ -1623,19 +1630,24 @@ class J2LFile extends JJ2File {
         for ($i = 0; $i < $tiles; $i += 1) {
             $tile_x = ($i % $tiles_x);
             $tile_y = floor($i / $tiles_x);
-            $pos_x = ($tile_x * 32);
-            $pos_y = ($tile_y * 32);
 
-            if ($pos_x < $this->box[0][0] - $margin || $pos_x > $this->box[1][0] + $margin || $pos_y < $this->box[0][1] - $margin) {
+            // distinguish between 'real' position and effective position
+            // real position is absolute pixel coordinates in the level; effective position is pixel coordinate in image
+            // that we are rendering to. The distinction is necessary to properly apply gravity to events, because for
+            // that we need to take into account the full level mask
+            $real_pos_x = ($tile_x * 32);
+            $real_pos_y = ($tile_y * 32);
+
+            if ($real_pos_x < $this->box[0][0] - $margin || $real_pos_x > $this->box[1][0] + $margin || $real_pos_y < $this->box[0][1] - $margin) {
                 continue;
             }
 
-            if ($pos_y + $margin > $this->box[1][1]) {
+            if ($real_pos_y + $margin > $this->box[1][1]) {
                 break;
             }
 
-            $pos_x += $offset_x;
-            $pos_y += $offset_y;
+            $pos_x = $real_pos_x + $offset_x;
+            $pos_y = $real_pos_y + $offset_y;
 
             $events->seek($i * 4);
             $event_bytes = $events->uint32();
@@ -1656,12 +1668,7 @@ class J2LFile extends JJ2File {
                 continue;
             }
 
-            if ($pos_x < imagesx($this->level_mask) && $pos_y < imagesy($this->level_mask) - 48) {
-                $on_ground = imagecolorat($this->level_mask, $pos_x, max(0, $pos_y + 48)) == 0;
-            } else {
-                $on_ground = false;
-            }
-
+            $on_ground = imagecolorat($this->level_mask, $real_pos_x, max(0, $real_pos_y + 48)) == 0;
             $event = $event_mgr->get_event($event_bytes, $on_ground);
 
             //only render Normal & MP Only events
@@ -1747,16 +1754,17 @@ class J2LFile extends JJ2File {
 
             //simulate gravity if it applies, basically just increase y position until a mask is met
             if ($event->feels_gravity) {
-                $test_x = min($tiles_x * 32, max($pos_x + $offset_x - $event->sprite[0]['coldspotx'], 0));
-                while ($pos_y < (($tiles_y * 32) - 1) && imagecolorat($this->level_mask, $test_x, $pos_y) != 0) {
-                    $pos_y += 1;
+                $test_x = min($tiles_x * 32, max($real_pos_x - $event->sprite[0]['coldspotx'], 0));
+                while ($real_pos_y < imagesy($this->level_mask) && imagecolorat($this->level_mask, $test_x, $real_pos_y) != 0) {
+                    $real_pos_y += 1;
                 }
                 $compare = $event->use_hotspot ? $event->sprite[0]['hotspoty'] : $event->sprite[0]['coldspoty'];
                 if ($compare != 0) {
-                    $pos_y += $compare;
+                    $real_pos_y += $compare;
                 } else {
-                    $pos_y -= $event->sprite[0]['height'];
+                    $real_pos_y -= $event->sprite[0]['height'];
                 }
+                $pos_y = $real_pos_y + $offset_y;
             } elseif ($event->is_pickup || $event->always_adjust) {
                 //floating stuff is centered, apparently
                 $pos_x += 16 + $event->sprite[0]['hotspotx'];
@@ -1778,6 +1786,102 @@ class J2LFile extends JJ2File {
 
 
     /**
+     * Render game HUD on top of image
+     *
+     * Renders the vanilla JJ2 HUD over the image, as suitable for the given game and character. Elements will be drawn
+     * in the correct corners, regardless of input image size.
+     *
+     * @param resource $image  Image to render HUD on
+     * @param string $mode  Game mode, one of 'battle', 'ctf', 'treasure', 'race', 'singleplayer'
+     * @param string $rabbit  Character, one of 'jazz', 'spaz', 'lori'
+     *
+     * @return resource GD Image resource for preview image
+     */
+    public function render_hud($image, $mode = 'singleplayer', $rabbit = 'jazz') {
+        $j2a = new J2AFile($this->resource_folder.DIRECTORY_SEPARATOR.'Anims.j2a', $this->palette, $this->resource_folder);
+
+        // left side elements
+        if($mode == 'battle') {
+            // just the score
+            $text = (new JJ2Text("roasts 0 /10", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            imagecopy($image, $text, 6, 2, 0, 0, imagesx($text), imagesy($text));
+
+        } elseif($mode == 'ctf') {
+            // scores for both teams - actually simpler in JJ2+ (though JJ2Text doesn't support colours)
+            $blue = (new JJ2Text("Blue 0/10", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            $red = (new JJ2Text("Red 0/10", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            imagecopy($image, $blue, 6, 2, 0, 0, imagesx($blue), imagesy($blue));
+            imagecopy($image, $red, 6, 2 + imagesy($blue) + 14, 0, 0, imagesx($red), imagesy($red));
+
+            $flag_blue = $j2a->get_frame(44, 4, 1)[1];
+            $flag_red = $j2a->get_frame(44, 8, 1)[1];
+            imagecopy($image, $flag_blue, 6 + imagesx($blue) + 8, 8, 0, 0, imagesx($flag_blue), imagesy($flag_blue));
+            imagecopy($image, $flag_red, 6 + imagesx($blue) + 8, 8 + imagesy($blue) + 14, 0, 0, imagesx($flag_red), imagesy($flag_red));
+
+        } elseif($mode == 'treasure') {
+            // a gem (yay, LUTs) and the score
+            $lut = [55,55,54,53,52,51,50,49,48,15,48,15,15,48,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,0,0,0];
+            $gem = $j2a->get_frame(71, 22, 4, $this->palette, $lut)[1];
+            imagecopy($image, $gem, -3, -3, 0, 0, imagesx($gem), imagesy($gem));
+            $score = (new JJ2Text("0\\10", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_NORMAL);
+            imagecopy($image, $score, 22, 2, 0, 0, imagesx($score), imagesy($score));
+
+        } elseif($mode == 'race') {
+            // the lap, and current time
+            $lap = (new JJ2Text("Lap 1\\5", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            $time = (new JJ2Text("0:04:56", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            imagecopy($image, $lap, 8, 2, 0, 0, imagesx($lap), imagesy($lap));
+            imagecopy($image, $time, 14, -3 + imagesy($lap), 0, 0, imagesx($time), imagesy($time));
+
+        } elseif($mode == 'singleplayer') {
+            // score, and character head + amount of lives
+            $score = (new JJ2Text("00000000", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            imagecopy($image, $score, 8, 2, 0, 0, imagesx($score), imagesy($score));
+
+            $lives = (new JJ2Text("x3", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+            imagecopy($image, $lives, 34, imagesy($image) - imagesy($lives) - 3, 0, 0, imagesx($lives), imagesy($lives));
+
+            $anim = ['jazz' => 3, 'lori' => 4, 'spaz' => 5][$rabbit];
+            $head = $j2a->get_frame(39, $anim, 0)[1];
+            imagecopy($image, $head, 3, imagesy($image) - imagesy($head) - 1, 0, 0, imagesx($head), imagesy($head));
+        }
+
+        // health: 3 or 5 hearts, if appropriate for game mode
+        if(in_array($mode, ['battle', 'ctf', 'singleplayer'])) {
+            $health = ($mode == 'ctf') ? 3 : 5;
+            $heart = $j2a->get_frame(71, 41, 0)[1];
+            $y = 3;
+            $x = imagesx($image) - 7 - (5 * (imagesx($heart) + 1));
+            for($i = 0; $i < $health; $i += 1) {
+                imagecopy($image, $heart, $x, $y, 0, 0, imagesx($heart), imagesy($heart));
+                $x += imagesx($heart) + 1;
+            }
+        }
+
+        // ammo
+        // does not take custom weapons into account (todo?)
+        $gun_offset = 5;
+        if(in_array($rabbit, ['jazz', 'spaz'])) {
+            $gun = $j2a->get_frame(0, ($rabbit == 'spaz' ? 19 : 18), 1)[1];
+            if($rabbit == 'spaz') {
+                $gun_offset = 3;
+            }
+        } else {
+            // lori has no gun sprite in TSF - get it from plus.j2a instead
+            $plusj2a = new J2AFile($this->resource_folder.DIRECTORY_SEPARATOR.'plus.j2a', $this->palette, $this->resource_folder);
+            $gun = $plusj2a->get_frame(0, 5, 0)[1];
+        }
+
+        // ^ = infinity sign in jj2 font
+        $ammo = (new JJ2Text("x^", $this->palette, $this->resource_folder))->get_image(JJ2Text::SIZE_MEDIUM);
+        imagecopy($image, $gun, imagesx($image) - 80 - imagesx($gun), imagesy($image) - $gun_offset - imagesy($gun), 0, 0, imagesx($gun), imagesy($gun));
+        imagecopy($image, $ammo, imagesx($image) - 77, imagesy($image) - 2 - imagesy($ammo), 0, 0, imagesx($ammo), imagesy($ammo));
+
+        return $image;
+    }
+
+
+    /**
      * Generate preview
      *
      * Wrapper for get_image() that tries to find some sensible parameters for it and calls it. If level is larger than
@@ -1785,16 +1889,18 @@ class J2LFile extends JJ2File {
      *
      * @return resource GD Image resource for preview image
      */
-    public function get_preview() {
+    public function get_preview($is_screenshot = false) {
         $box = $this->get_visible_box();
         $width = $box[1][0] - $box[0][0];
         $height = $box[1][1] - $box[0][1];
 
+        $start_pos = $this->get_start_pos();
+        $rabbit = $start_pos[1];
+        $start_pos = $start_pos[0];
+
         //if level is larger than max view area, center on *a* start position
         if ($width * $height > $this->budget) {
             $ratio = $height / $width;
-
-            $start_pos = $this->get_start_pos();
 
             $width_optimal = floor(sqrt($this->budget / $ratio));
             $half_width = $width_optimal / 2;
@@ -1823,6 +1929,18 @@ class J2LFile extends JJ2File {
             }
         }
 
-        return $this->get_image([], true, $box);
+        $preview = $this->get_image([], true, $box);
+
+        if($is_screenshot) {
+            $crop_x = max(0, $start_pos[0] - $box[0][0] - 400);
+            $crop_y = max(0, $start_pos[1] - $box[0][1] - 300);
+
+            $screenshot = imagecreatetruecolor(800, 600);
+            imagecopy($screenshot, $preview, 0, 0, $crop_x, $crop_y, 800, 600);
+
+            return $this->render_hud($screenshot, 'singleplayer', $rabbit);
+        } else {
+            return $preview;
+        }
     }
 }
