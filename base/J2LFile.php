@@ -370,6 +370,10 @@ class J2LFile extends JJ2File {
                 'anim' => ($anim_tiles > 0 ? $info->bytes(137, $anim_tiles) : [])
             ];
 
+            if(!is_array($this->settings['anim'])) {
+                $this->settings['anim'] = [$this->settings['anim']];
+            }
+
             //parse anim data
             for ($i = 0; $i < $this->settings['anim_count']; $i++) {
                 $anim = new BufferReader($this->settings['anim'][$i]);
