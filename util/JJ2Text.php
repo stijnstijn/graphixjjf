@@ -95,9 +95,13 @@ class JJ2Text {
      */
     const SIZE_NORMAL = 1;
     /**
+     * "medium" size
+     */
+    const SIZE_MEDIUM = 0;
+    /**
      * "large" size
      */
-    const SIZE_LARGE = 0;
+    const SIZE_LARGE = 2;
 
     /**
      * JJ2Text constructor.
@@ -116,7 +120,7 @@ class JJ2Text {
      *
      * @todo colours, line breaks, spacing, etc (but do we need them?)
      *
-     * @param int $size  Size; either JJ2Text::SIZE_NORMAL or JJ2Text::SIZE_LARGE
+     * @param int $size  Size; JJ2Text::SIZE_{NORMAL,MEDIUM,LARGE}
      * @return resource  Text as image
      */
     public function get_image($size = self::SIZE_NORMAL) {
