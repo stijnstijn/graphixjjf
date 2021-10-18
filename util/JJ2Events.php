@@ -550,7 +550,6 @@ class JJ2Events {
                 } else {
                     //platforms
                     $spike_boll = false;
-                    $event->offset_y += 11;
                 }
 
                 $platform = $j2a->get_frame($set_ID, 0, 0);
@@ -560,7 +559,14 @@ class JJ2Events {
                 $chain_overlap = ($spike_boll || $event_ID == 210) ? 2 : 0; //metal chains overlap, other "chain" sprites don't
 
                 $width = $platform[0]['width'];
-                $height = (($chain[0]['height'] - $chain_overlap) * 2) + (($chain[0]['height'] - $chain_overlap) * $chain_length) + $platform[0]['height'];
+                if($length > 0) {
+                    if(!$spike_boll) {
+                        $event->offset_y += 11;
+                    }
+                    $height = (($chain[0]['height'] - $chain_overlap) * 2) + (($chain[0]['height'] - $chain_overlap) * $chain_length) + $platform[0]['height'];
+                } else {
+                    $height = $platform[0]['height'];
+                }
                 $swinging_platform = $this->get_empty_image($width, $height);
 
                 if ($spike_boll) {
