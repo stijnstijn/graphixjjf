@@ -774,8 +774,15 @@ class J2LFile extends JJ2File {
                     }
                 }
 
-                //this is a bunch of stuff we don't do anything with
-                if ($i == 8) {
+                if ($weapon['custom']) {
+                    //this is a bunch of MLLE data we don't need
+                    //it does potentially contain weapon parameters, but implementing
+                    //all of those is left as an exercise to the reader here
+                    $data5->string_7bit(); // weapon name, not needed
+                    $weapon_blob_size = $data5->int32();
+                    $data5->skip($weapon_blob_size);
+                } elseif ($i == 8) {
+                    //this is a bunch of stuff we don't do anything with
                     $spread = $data5->uint8();
                     if ($spread == 0) {
                         $weapon['spread'] = 'gun8';
@@ -785,13 +792,6 @@ class J2LFile extends JJ2File {
                         $weapon['spread'] = 'normal';
                     }
                     $weapon['gradualAim'] = ($spread == 2);
-                } elseif ($weapon['custom']) {
-                    //this is a bunch of MLLE data we don't need
-                    //it does potentially contain weapon parameters, but implementing
-                    //all of those is left as an exercise to the reader here
-                    $data5->string_7bit(); // weapon name, not needed
-                    $weapon_blob_size = $data5->uint32();
-                    $data5->skip($weapon_blob_size);
                 }
 
                 $this->mlle_settings['weapons'][$i] = $weapon;
