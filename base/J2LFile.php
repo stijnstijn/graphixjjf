@@ -1299,6 +1299,7 @@ class J2LFile extends JJ2File {
             $this->load_tileset();
         }
 
+        $have_rendered_a_layer = false;
         $have_rendered_sprite_layer = false;
         foreach ($layers as $layer_ID) {
             $layer = &$this->layers[$layer_ID];
@@ -1308,9 +1309,17 @@ class J2LFile extends JJ2File {
 
             if ($layer['texture_mode'] > 0 && !$have_rendered_sprite_layer) {
                 $this->render_textured_background($layer_ID, $image, $layer['texture_rgb']);
+                $have_rendered_a_layer = true;
             } elseif (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']) || ($layer['tile_width'] && $layer['tile_height'])) {
                 //render only layers with x and y speed = 1 OR tileX and tileY
-                $this->render_layer($layer_ID, $image, false, $box);
+                if(!$have_rendered_a_layer && ($layer['width'] != $layer['height'] || $layer['width'] > 8)) {
+                    //some special treatment for the background layer if it's not tiling so well
+                    $this->render_stretched_layer($layer_ID, $image);
+                } else {
+                    $this->render_layer($layer_ID, $image, false, $box);
+                }
+
+                $have_rendered_a_layer = true;
 
                 if ($layer_ID == $settings['sprite_layer']) {
                     $have_rendered_sprite_layer = true;
@@ -1396,6 +1405,43 @@ class J2LFile extends JJ2File {
         imagecopyresampled($level_image, $screen, 0, 0, 0, 0, imagesx($level_image), imagesy($level_image), imagesx($screen), imagesy($screen));
 
         return $screen;
+    }
+
+    /**
+     * Render a layer once and make it fill the target image
+     *
+     * This can be used for non-tiling background layers. Having a stretched and potentially blurry background image
+     * is usually preferable to trying to tile a non-tiling image.
+     *
+     * Does try to keep the proportions of the image though.
+     *
+     * @param int $layer_ID  Layer ID to stretch and render
+     * @param resource $image  Image to render to
+     */
+    private function render_stretched_layer(int $layer_ID, $image) {
+        $layer = $this->layers[$layer_ID];
+
+        $texture = imagecreatetruecolor($layer['width'] * 32, $layer['height'] * 32);
+        $this->render_layer($layer_ID, $texture, false, [[0, 0], [imagesx($texture), imagesy($texture)]], false);
+
+        $ratio_texture = imagesx($texture) / imagesy($texture);
+        $ratio_target = imagesx($image) / imagesy($image);
+
+        // preserve aspect ratio of layer while stretching
+        if($ratio_target > $ratio_texture) {
+            $paste_width = imagesx($image);
+            $paste_height = imagesx($image) / $ratio_texture;
+            $paste_x = 0;
+            $paste_y = 0 - ($paste_height - imagesy($image)) / 2;
+        } else {
+            $paste_width = imagesy($image) * $ratio_texture;
+            $paste_height = imagesy($image);
+            $paste_x = 0 - ($paste_width - imagesx($image)) / 2;
+            $paste_y = 0;
+        }
+
+        imagecopyresampled($image, $texture, $paste_x, $paste_y, 0, 0, $paste_width, $paste_height, imagesx($texture), imagesy($texture));
+        unset($texture);
     }
 
 
