@@ -1862,7 +1862,7 @@ class J2LFile extends JJ2File {
         // does not take custom weapons into account (todo?)
         $gun_offset = 5;
         if(in_array($rabbit, ['jazz', 'spaz'])) {
-            $gun = $j2a->get_frame(0, ($rabbit == 'spaz' ? 19 : 18), 1)[1];
+            $gun = $j2a->get_frame(71, ($rabbit == 'spaz' ? 30 : 29), 1)[1];
             if($rabbit == 'spaz') {
                 $gun_offset = 3;
             }
