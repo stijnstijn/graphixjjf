@@ -849,7 +849,15 @@ class JJ2Events {
 
             case 195: //uterus
                 $frame = $j2a->get_frame($set_ID, $anim_ID, $frame_ID);
-                imagerotate($frame[1], 90, imagecolorat($frame[1], 0, 0));
+                $frame[1] = imagerotate($frame[1], -90, imagecolorat($frame[1], 0, 0));
+                $frame[0] = [
+                    'width' => imagesx($frame[1]),
+                    'height' => imagesy($frame[1]),
+                    'hotspotx' => 0 - (imagesx($frame[1]) / 2),
+                    'hotspoty' => 0 - (imagesy($frame[1]) / 2),
+                    'coldspotx' => 0,
+                    'coldspoty' => 0
+                ];
                 break;
 
             case 237: //BeeBoy
