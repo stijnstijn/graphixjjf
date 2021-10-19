@@ -1359,7 +1359,6 @@ class J2LFile extends JJ2File {
         $sprite_layer = $this->layers[$this->settings['sprite_layer']];
         $this->level_mask = imagecreatetruecolor($sprite_layer['width'] * 32, $sprite_layer['height'] * 32);
         $this->level_mask = $this->render_layer($settings['sprite_layer'], $this->level_mask, true, [[0, 0], [imagesx($this->level_mask), imagesy($this->level_mask)]]);
-        imagepng($this->level_mask, 'mask.png');
     }
 
 
@@ -1438,19 +1437,23 @@ class J2LFile extends JJ2File {
         // if not, stretch it
         $diff = [];
         for($x = 0; $x < imagesx($texture); $x += 1) {
-            $color1 = imagecolorat($texture, $x, 0);
-            $color2 = imagecolorat($texture, $x, imagesy($texture) - 1);
-            $diff[] = abs($color2 - $color1);
+            $c1 = imagecolorat($texture, $x, 0);
+            $c1 = [($c1 >> 16) & 0xFF, ($c1 >> 8) & 0xFF, $c1 & 0xFF];
+            $c2 = imagecolorat($texture, $x, imagesy($texture) - 1);
+            $c2 = [($c2 >> 16) & 0xFF, ($c2 >> 8) & 0xFF, $c2 & 0xFF];
+            $diff[] = array_sum([abs($c1[0] - $c2[0]), abs($c1[1] - $c2[1]), abs($c1[2] - $c2[2])]);
         }
 
         for($y = 0; $y < imagesy($texture); $y += 1) {
-            $color1 = imagecolorat($texture, 0, $y);
-            $color2 = imagecolorat($texture, imagesx($texture) - 1, $y);
-            $diff[] = abs($color2 - $color1);
+            $c1 = imagecolorat($texture, 0, $y);
+            $c1 = [($c1 >> 16) & 0xFF, ($c1 >> 8) & 0xFF, $c1 & 0xFF];
+            $c2 = imagecolorat($texture, imagesx($texture) - 1, $y);
+            $c2 = [($c2 >> 16) & 0xFF, ($c2 >> 8) & 0xFF, $c2 & 0xFF];
+            $diff[] = array_sum([abs($c1[0] - $c2[0]), abs($c1[1] - $c2[1]), abs($c1[2] - $c2[2])]);
         }
 
         $avg_diff = array_sum($diff) / count($diff);
-        if($avg_diff < 100000) {
+        if($avg_diff < 100) {
             // sort of arbitrary, but this seems to be a reasonable threshold
             // if the layer tiles, don't stretch but render as usual
             $this->render_layer($layer_ID, $image, false, $this->box);
