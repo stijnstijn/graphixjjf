@@ -384,7 +384,7 @@ class JJ2Events {
         }
 
         if (!array_key_exists($filename, $this->j2a)) {
-            $this->j2a[$filename] = new J2AFile($path, $this->palette);
+            $this->j2a[$filename] = new J2AFile($path, $this->palette, $this->resource_folder);
             $this->j2a[$filename]->load_remapping($this->palette_remapping);
         }
 
