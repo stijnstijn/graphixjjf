@@ -1314,8 +1314,12 @@ class J2LFile extends JJ2File {
             if ($layer['texture_mode'] > 0 && !$have_rendered_sprite_layer) {
                 $this->render_textured_background($layer_ID, $image, $layer['texture_rgb']);
                 $have_rendered_a_layer = true;
-            } elseif (($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y']) || ($layer['tile_width'] && $layer['tile_height'])) {
-                //render only layers with x and y speed = 1 OR tileX and tileY
+            } elseif (
+                !$have_rendered_a_layer
+                || ($layer['speed_x'] == 65536 && $layer['speed_x'] == $layer['speed_y'])
+                || ($layer['tile_width'] && $layer['tile_height'] && !($have_rendered_sprite_layer && $layer['speed_x'] == 0 && $layer['speed_y'] == 0))
+            ) {
+                //render only layers with x and y speed = 1 OR (tileX and tileY AND speeds != 0)
                 if(!$have_rendered_a_layer && ($layer['width'] != $layer['height'] || $layer['width'] > 8)) {
                     //some special treatment for the background layer if it's not tiling so well
                     $this->render_stretched_layer($layer_ID, $image);
