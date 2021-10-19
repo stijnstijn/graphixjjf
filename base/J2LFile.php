@@ -1430,6 +1430,29 @@ class J2LFile extends JJ2File {
         $texture = imagecreatetruecolor($layer['width'] * 32, $layer['height'] * 32);
         $this->render_layer($layer_ID, $texture, false, [[0, 0], [imagesx($texture), imagesy($texture)]], false);
 
+        // see if the texture tiles: if it does, render the level as usual
+        // if not, stretch it
+        $diff = [];
+        for($x = 0; $x < imagesx($texture); $x += 1) {
+            $color1 = imagecolorat($texture, $x, 0);
+            $color2 = imagecolorat($texture, $x, imagesy($texture) - 1);
+            $diff[] = abs($color2 - $color1);
+        }
+
+        for($y = 0; $y < imagesy($texture); $y += 1) {
+            $color1 = imagecolorat($texture, 0, $y);
+            $color2 = imagecolorat($texture, imagesx($texture) - 1, $y);
+            $diff[] = abs($color2 - $color1);
+        }
+
+        $avg_diff = array_sum($diff) / count($diff);
+        if($avg_diff < 100000) {
+            // sort of arbitrary, but this seems to be a reasonable threshold
+            // if the layer tiles, don't stretch but render as usual
+            $this->render_layer($layer_ID, $image, false, $this->box);
+            return;
+        }
+
         $ratio_texture = imagesx($texture) / imagesy($texture);
         $ratio_target = imagesx($image) / imagesy($image);
 
