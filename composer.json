@@ -19,7 +19,6 @@
     "forum": "https://www.jazz2online.com/jcf"
   },
   "require": {
-    "php": "^7.4",
     "ext-gd": "*",
     "ext-zlib": "*"
   },
