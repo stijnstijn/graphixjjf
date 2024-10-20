@@ -470,7 +470,7 @@ class J2LFile extends JJ2File {
 
         //only the 1.3 and 1.4 libraries are supported for now
         $version = $data5->uint32();
-        if (!in_array($version, [0x103, 0x104, 0x105])) {
+        if (!in_array($version, [0x103, 0x104, 0x105, 0x106])) {
             throw new JJ2FileException('Unsupported MLLE version');
         }
 
@@ -510,8 +510,24 @@ class J2LFile extends JJ2File {
             for ($c = 0; $c < 256; $c += 1) {
                 $this->mlle_settings['palette'][$c] = [$data5->uint8(), $data5->uint8(), $data5->uint8()];
             }
+            if($version >= 0x106) {
+                $data5->bool(); // 'reapply palette' - seems internal to MLLE
+            }
         } else {
             $this->mlle_settings['palette'] = NULL;
+        }
+
+        if($version >= 0x106) {
+            // new in 1.6
+            $this->mlle_settings['extra_palettes_count'] = $data5->uint8();
+            $this->mlle_settings['extra_palettes'] = [];
+            for($i = 0; $i < $this->mlle_settings['extra_palettes_count']; $i++) {
+                $palette_name = $data5->string_7bit();
+                $this->mlle_settings['extra_palettes'][$palette_name] = [];
+                for ($c = 0; $c < 256; $c += 1) {
+                    $this->mlle_settings['extra_palettes'][$palette_name][$c] = [$data5->uint8(), $data5->uint8(), $data5->uint8()];
+                }
+            }
         }
 
         // remapped event palettes
@@ -603,7 +619,7 @@ class J2LFile extends JJ2File {
             }
         }
 
-        $extra_layers_count = $data5->uint32();
+        $total_layer_count = $data5->uint32();
 
         //cache layer maps, since we're going to change the order
         for ($i = 1; $i <= 8; $i += 1) {
@@ -615,35 +631,39 @@ class J2LFile extends JJ2File {
         array_pop($base_filename);
 
         $layer_ID = 8;
-        if ($extra_layers_count > $layer_ID) {
-            for ($i = 1; $i <= floor($extra_layers_count / 8); $i += 1) {
-                $external_level = $this->find_adjacent(implode('.', $base_filename).'-MLLE-Data-'.$i.'.j2l');
+        $extra_level_filename = '';
+        $external_j2l = null;
+        for($i = 8; $i < $total_layer_count; $i += 8) {
+            $layer_source = implode('.', $base_filename).'-MLLE-Data-'.floor($i / 8).'.j2l';
+            if($layer_source != $extra_level_filename) {
+                $extra_level_filename = $layer_source;
+                $external_level = $this->find_adjacent($extra_level_filename);
                 if ($external_level === NULL) {
-                    throw new JJ2FileException('Cannot find MLLE Data file '.$i);
+                    throw new JJ2FileException('Cannot find MLLE Data file ' . $extra_level_filename);
                 }
 
                 try {
                     $external_j2l = new J2LFile($external_level);
                 } catch (JJ2FileException $e) {
-                    throw new JJ2FileException('Cannot parse MLLE Data file '.$i.' ('.$e->getMessage().')');
+                    throw new JJ2FileException('Cannot parse MLLE Data file ' . $extra_level_filename . ' (' . $e->getMessage() . ')');
                 }
+            }
 
-                $external_settings = $external_j2l->get_settings();
-                foreach ($external_settings['layers'] as $external_layer_ID => $layer) {
-                    $layer_ID += 1;
-                    $this->import_layer($external_j2l, $external_layer_ID, $layer_ID);
-                }
-                unset($external_j2l);
+            $external_settings = $external_j2l->get_settings();
+            foreach ($external_settings['layers'] as $external_layer_ID => $layer) {
+                $layer_ID += 1;
+                $this->import_layer($external_j2l, $external_layer_ID, $layer_ID);
             }
         }
+        unset($external_j2l);
 
         //update layer order
         $new_layers = [];
         $new_ID = 1;
         $imported_layer_ID = 9;
-        for ($i = 0; $i < $extra_layers_count; $i += 1) {
-            $layer_ID = $data5->char();
-            if ($layer_ID != 0xFF) {
+        for ($i = 0; $i < $total_layer_count; $i += 1) {
+            $layer_ID = $data5->int8();
+            if ($layer_ID >= 0) {
                 $new_layers[$new_ID] = $this->settings['layers'][$layer_ID + 1];
             } else {
                 $new_layers[$new_ID] = $this->settings['layers'][$imported_layer_ID];
@@ -656,6 +676,31 @@ class J2LFile extends JJ2File {
             $new_layers[$new_ID]['sprite_param'] = $data5->uint8();
             $new_layers[$new_ID]['angle'] = $data5->int32();
             $new_layers[$new_ID]['angle_multiplier'] = $data5->int32();
+
+            if($version >= 0x106) {
+                // some new properties in 1.6
+                $new_layers[$new_ID]['x_speed_model'] = $data5->uint8();
+                $new_layers[$new_ID]['y_speed_model'] = $data5->uint8();
+                $new_layers[$new_ID]['texture_surface'] = $data5->uint8();
+                $new_layers[$new_ID]['reflection_tint'] = $data5->uint8();
+                $new_layers[$new_ID]['reflection_xfade'] = $data5->float();
+                $new_layers[$new_ID]['reflection_top'] = $data5->float();
+                $new_layers[$new_ID]['x_inner_speed'] = $data5->float();
+                $new_layers[$new_ID]['y_inner_speed'] = $data5->float();
+                $new_layers[$new_ID]['x_inner_auto_speed'] = $data5->float();
+                $new_layers[$new_ID]['y_inner_auto_speed'] = $data5->float();
+
+                $new_layers[$new_ID]['texture_id'] = $data5->int8();
+                $new_layers[$new_ID]['texture'] = [];
+                if($new_layers[$new_ID]['texture_id'] < 0) {
+                    for($y=0;$y<256;$y+=1) {
+                        $new_layers[$new_ID]['texture'][$y] = [];
+                        for($x=0;$x<256;$x+=1) {
+                            $new_layers[$new_ID]['texture'][$y][$x] = $data5->uint8();
+                        }
+                    }
+                }
+            }
 
             $new_ID += 1;
         }
@@ -750,6 +795,11 @@ class J2LFile extends JJ2File {
         //load weapons settings (this is only valid for version 0x105+)
         $this->mlle_settings['weapons'] = [];
 
+        if($version >= 0x106) {
+            // mysterious new unused value
+            $data5->short();
+        }
+
         if ($version >= 0x105) {
             for ($i = 1; $i <= 9; $i += 1) {
                 $weapon = [
@@ -801,6 +851,20 @@ class J2LFile extends JJ2File {
             }
         }
 
+        if($version >= 0x106) {
+            $num_objects = $data5->uint16();
+            for($i = 0; $i < $num_objects; $i += 1) {
+                //animations
+                //skipping for now...
+                $data5->uint16();
+                $data5->uint16();
+                $data5->int32();
+            }
+        }
+
+        if($data5->get_remaining() > 0) {
+            throw new JJ2FileException('Unexpected data remaining at the end of Data5');
+        }
 
         $this->determine_sprite_layer();
         $this->mlle_version = $version;
