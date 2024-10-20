@@ -1458,7 +1458,7 @@ class J2LFile extends JJ2File {
             for ($x = 0; $x < imagesx($screen); $x += 1) {
                 $texture_x = imagesx($texture) * ($ref * ($x - $half_screen_width)) / 256;
                 $texture_x += $offset;
-                $color = imagecolorat($texture, abs($texture_x) % imagesx($texture), abs($texture_y) % imagesy($texture));
+                $color = imagecolorat($texture, abs(intval($texture_x)) % imagesx($texture), abs(intval($texture_y)) % imagesy($texture));
                 imagesetpixel($screen, $x, $y, imagecolorallocate($screen, ($color >> 16) & 0xFF, ($color >> 8) & 0xFF, $color & 0xFF));
             }
         }
@@ -1472,7 +1472,7 @@ class J2LFile extends JJ2File {
 
         for ($y = $fade_start; $y < $fade_end; $y += 1) {
             $fade += $fade_step;
-            $alpha = 127 * (1 - sin($fade));
+            $alpha = intval(127 * (1 - sin($fade)));
             $color = imagecolorallocatealpha($screen, $fade_color[0], $fade_color[1], $fade_color[2], $alpha);
             imagefilledrectangle($screen, 0, $y, imagesx($screen), $y, $color);
         }
