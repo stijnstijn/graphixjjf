@@ -304,7 +304,8 @@ class BufferReader {
      */
     public function int8(int $number = 1) {
         $this->latest = $this->read($number, function () {
-            return ord($this->get_bytes(1)) - 128;
+            $byte = ord($this->get_bytes(1));
+            return ($byte & 0x80) ? -($byte - 0x80) : $byte;
         });
 
         return $this->latest;
