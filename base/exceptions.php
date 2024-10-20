@@ -8,7 +8,7 @@ namespace J2o\Exception;
  * Throw when BufferReader encounters an issue
  * @package J2o\Exception
  */
-class BufferException extends\ErrorException {}
+class BufferException extends \ErrorException {}
 
 /**
  * Throw when an issue is encountered while reading a Jazz Jackrabbit data file
