@@ -154,7 +154,10 @@ class J2LFile extends JJ2File {
         'Jeh',
         'siren'
     ];
-
+    /**
+     * @var array  Words in the level tile dictionary
+     */
+    private $words;
 
     /**
      * Constructor method
