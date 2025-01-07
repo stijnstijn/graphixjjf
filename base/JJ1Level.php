@@ -83,6 +83,7 @@ class JJ1Level extends JJ1File
             $path = explode(DIRECTORY_SEPARATOR, $this->filename);
             array_pop($path);
             array_push($path, $blocks_file);
+            $path = implode(DIRECTORY_SEPARATOR, $path);
         }
 
         if(!is_readable($path)) {
