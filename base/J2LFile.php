@@ -470,7 +470,7 @@ class J2LFile extends JJ2File {
 
         //only the 1.3 and 1.4 libraries are supported for now
         $version = $data5->uint32();
-        if (!in_array($version, [0x103, 0x104, 0x105, 0x106])) {
+        if (!in_array($version, [0x103, 0x104, 0x105, 0x106, 0x107])) {
             throw new JJ2FileException('Unsupported MLLE version');
         }
 
