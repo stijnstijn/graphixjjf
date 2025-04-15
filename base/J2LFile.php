@@ -988,7 +988,7 @@ class J2LFile extends JJ2File {
      *
      * @throws JJ2FileException If tileset file could not be read or parsed
      */
-    public function load_tileset(string $path = NULL, array $palette = NULL): void {
+    public function load_tileset(?string $path = NULL, ?array $palette = NULL): void {
         if($this->tileset_image) {
             return;
         }
@@ -1338,7 +1338,7 @@ class J2LFile extends JJ2File {
      *
      * @throws  JJ2FileException  If the tileset for the level could not be loaded
      */
-    public function get_image($layers = [], bool $render_events = true, array $box = NULL) {
+    public function get_image($layers = [], bool $render_events = true, ?array $box = NULL) {
         $settings = $this->get_settings();
         $layer4 = &$this->layers[$settings['sprite_layer']];
 
@@ -1562,7 +1562,7 @@ class J2LFile extends JJ2File {
      * @return  resource The level preview image.
      * @throws JJ2FileException  If the layer to be rendered has no tiles in it
      */
-    private function render_layer(int $layer_ID, $image, bool $is_mask = false, array $box = NULL, $expand=true) {
+    private function render_layer(int $layer_ID, $image, bool $is_mask = false, ?array $box = NULL, $expand=true) {
         $this->get_settings();
         $layer = $this->layers[$layer_ID];
         if(!$layer['has_tiles']) {

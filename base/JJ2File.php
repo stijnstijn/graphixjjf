@@ -65,7 +65,7 @@ abstract class JJ2File implements JJFile {
      * files (e.g. animation libraries). Defaults to 'resources' in this file's
      * parent folder if left empty
      */
-    public function __construct(string $filename, array $palette = NULL, string $resource_folder = NULL) {
+    public function __construct(string $filename, ?array $palette = NULL, ?string $resource_folder = NULL) {
         $this->filename = $filename;
         $this->palette = $palette;
         $this->resource_folder = $resource_folder ?? dirname(dirname(__FILE__)).DIRECTORY_SEPARATOR.'resources';
@@ -116,7 +116,7 @@ abstract class JJ2File implements JJFile {
      * @return array                     Palette file, 256 entries with `[r, g, b]` structure
      * @throws JJ2FileException          If file path given does not work
      */
-    public function parse_palette(string $palette_file = NULL, bool $force = false): array {
+    public function parse_palette(?string $palette_file = NULL, bool $force = false): array {
         if (!$this->palette || $force) {
             if ($palette_file === NULL) {
                 $palette_file = $this->resource_folder.DIRECTORY_SEPARATOR.'Jazz2.pal';

@@ -207,7 +207,7 @@ class BufferReader {
      * @return array|string
      * @throws BufferException  If asked to return less than 1 value
      */
-    public function string(int $length = NULL, int $number = 1, bool $trim = true, bool $parse_7bit = false) {
+    public function string(?int $length = NULL, int $number = 1, bool $trim = true, bool $parse_7bit = false) {
         if ($number < 1) {
             throw new BufferException('Cannot read '.$number.' values: must be 1 or more');
         }
@@ -257,7 +257,7 @@ class BufferReader {
      *
      * @return array|string
      */
-    public function string_7bit(int $length = NULL, int $number = 1, bool $trim = true) {
+    public function string_7bit(?int $length = NULL, int $number = 1, bool $trim = true) {
         return $this->string($length, $number, $trim, true);
     }
 
