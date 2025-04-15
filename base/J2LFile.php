@@ -1683,6 +1683,59 @@ class J2LFile extends JJ2File {
         return $image;
     }
 
+    /**
+     * Get event map
+     *
+     * @return  array  Event map, two-dimensional array x => y
+     *
+     */
+    public function get_event_map() {
+        $settings = $this->get_settings();
+
+        shuffle($this->player_names);
+        $layer4 = &$this->layers[$settings['sprite_layer']];
+        $tiles = $layer4['width'] * $layer4['height'];
+        $tiles_x = $layer4['width'];
+
+        $events = new BufferReader($this->get_substream(2));
+        $map = [];
+
+        for ($i = 0; $i < $tiles; $i += 1) {
+            $tile_x = ($i % $tiles_x);
+            $tile_y = floor($i / $tiles_x);
+
+            $events->seek($i * 4);
+            $event_bytes = $events->uint32();
+
+            $event_ID = $event_bytes & 255; //event ID = first 8 bits
+            if ($event_ID == 0) {
+                continue;
+            }
+
+            $event = [
+                'position' => [$tile_x, $tile_y],
+                'id' => $event_ID,
+                'generator' => false,
+                'flags' => $event_bytes
+            ];
+
+            //generators
+            if ($event_ID == 216) {
+                $event['flags'] = $event['flags'] >> 12;
+                $event['id'] = $event['flags'] & pow(2, 8) - 1;
+                $event['generator'] = true;
+            }
+
+            if(!array_key_exists($event['id'], $map)) {
+                $map[$event['id']] = [];
+            }
+
+            $map[$event['id']][] = $event;
+        }
+
+        return $map;
+    }
+
 
     /**
      * Render events
